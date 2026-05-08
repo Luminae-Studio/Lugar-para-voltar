@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Lugar para Voltar</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Rajdhani:wght@400;600;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#06020f;overflow:hidden;font-family:'Rajdhani',sans-serif;color:#fff;user-select:none;}
+canvas{display:block;}
+#ui{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;}
+#screen{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:all;background:#06020f;}
+#screen.hidden{display:none;}
+.st{font-family:'Cinzel',serif;font-size:clamp(28px,5vw,52px);color:#aa66ff;text-align:center;margin-bottom:8px;letter-spacing:4px;}
+.ss{font-size:clamp(13px,2vw,17px);color:#aaa;text-align:center;max-width:500px;line-height:1.9;margin-bottom:28px;padding:0 24px;}
+.btn{font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;letter-spacing:3px;text-transform:uppercase;padding:14px 44px;border:2px solid #aa66ff;background:transparent;color:#aa66ff;cursor:pointer;transition:all .2s;border-radius:4px;}
+.btn:hover{background:#aa66ff;color:#000;}
+#fade{position:absolute;top:0;left:0;width:100%;height:100%;background:#000;pointer-events:none;transition:opacity 1.2s;}
+
+/* Stars bg */
+#stars-cv{position:absolute;top:0;left:0;pointer-events:none;}
+</style>
+</head>
+<body>
+<canvas id="stars-cv"></canvas>
+<div id="ui">
+  <div id="fade" style="opacity:1;"></div>
+  <div id="screen"><div id="sc"></div></div>
+</div>
+<script>
+// ── AUDIO ────────────────────────────────────────────────────────────────────
+var AC=new(window.AudioContext||window.webkitAudioContext)();
+document.addEventListener('click',function(){if(AC.state==='suspended')AC.resume();});
+function playPortal(){
+  try{
+    // Mystical portal sound
+    [220,277,330,440].forEach(function(f,i){
+      var o=AC.createOscillator(),g=AC.createGain();
+      o.connect(g);g.connect(AC.destination);
+      o.type='sine';o.frequency.setValueAtTime(f,AC.currentTime+i*.15);
+      g.gain.setValueAtTime(0,AC.currentTime+i*.15);
+      g.gain.linearRampToValueAtTime(.12,AC.currentTime+i*.15+.1);
+      g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+i*.15+1.2);
+      o.start(AC.currentTime+i*.15);o.stop(AC.currentTime+i*.15+1.2);
+    });
+  }catch(e){}
+}
+function playRumble(){
+  try{
+    var o=AC.createOscillator(),g=AC.createGain();
+    o.connect(g);g.connect(AC.destination);
+    o.type='sawtooth';o.frequency.setValueAtTime(60,AC.currentTime);
+    o.frequency.linearRampToValueAtTime(30,AC.currentTime+.8);
+    g.gain.setValueAtTime(.18,AC.currentTime);
+    g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+.9);
+    o.start();o.stop(AC.currentTime+.9);
+  }catch(e){}
+}
+
+// ── STARS BACKGROUND ─────────────────────────────────────────────────────────
+var scv=document.getElementById('stars-cv'),sctx=scv.getContext('2d');
+var W,H;
+function resize(){W=scv.width=window.innerWidth;H=scv.height=window.innerHeight;}
+resize();window.addEventListener('resize',resize);
+
+var stars=[];
+for(var i=0;i<200;i++) stars.push({x:Math.random(),y:Math.random(),r:.3+Math.random()*1.4,tw:Math.random()*6.28,spd:.008+Math.random()*.015});
+
+var portalT=0,showPortal=false,portalAlpha=0;
+var gt=0,lt=0;
+
+function animBg(ts){
+  var dt=Math.min((ts-lt)/16.67,3);lt=ts;gt+=dt;
+  sctx.fillStyle='#06020f';sctx.fillRect(0,0,W,H);
+
+  // Stars
+  stars.forEach(function(s){
+    s.tw+=s.spd*dt;
+    var alpha=.2+Math.sin(s.tw)*.18;
+    sctx.beginPath();sctx.arc(s.x*W,s.y*H,s.r,0,Math.PI*2);
+    sctx.fillStyle='rgba(255,255,255,'+alpha+')';sctx.fill();
+  });
+
+  // Portal effect
+  if(showPortal){
+    portalT+=dt;portalAlpha=Math.min(1,portalT/30);
+    var cx=W/2,cy=H/2;
+    for(var r=0;r<5;r++){
+      var radius=40+r*35+Math.sin(gt*.08+r)*10;
+      var alpha2=portalAlpha*(.5-r*.08);
+      var grd=sctx.createRadialGradient(cx,cy,0,cx,cy,radius);
+      grd.addColorStop(0,'rgba(180,100,255,'+alpha2+')');
+      grd.addColorStop(1,'rgba(80,0,160,0)');
+      sctx.fillStyle=grd;sctx.beginPath();sctx.arc(cx,cy,radius,0,Math.PI*2);sctx.fill();
+    }
+    // Portal ring
+    sctx.beginPath();sctx.arc(cx,cy,80+Math.sin(gt*.1)*8,0,Math.PI*2);
+    sctx.strokeStyle='rgba(200,120,255,'+portalAlpha*.8+')';sctx.lineWidth=3;sctx.stroke();
+  }
+
+  requestAnimationFrame(animBg);
+}
+requestAnimationFrame(animBg);
+
+// ── PROGRESS SYSTEM ───────────────────────────────────────────────────────────
+function saveProgress(phase){
+  try{localStorage.setItem('ltv_progress',phase);}catch(e){}
+}
+function getProgress(){
+  try{return parseInt(localStorage.getItem('ltv_progress'))||0;}catch(e){return 0;}
+}
+
+// ── SCREENS ───────────────────────────────────────────────────────────────────
+var sel=document.getElementById('screen');
+function showS(html){sel.classList.remove('hidden');document.getElementById('sc').innerHTML=html;}
+function hideS(){sel.classList.add('hidden');}
+
+function fadeIn(cb){
+  var f=document.getElementById('fade');
+  f.style.opacity='0';
+  setTimeout(function(){if(cb)cb();},1300);
+}
+function fadeOut(cb){
+  var f=document.getElementById('fade');
+  f.style.opacity='1';
+  setTimeout(function(){if(cb)cb();},1300);
+}
+
+// ── INTRO FLOW ────────────────────────────────────────────────────────────────
+function startIntro(){
+  showS(
+    '<div style="text-align:center;padding:0 24px;max-width:560px;">'
+    +'<div style="font-size:11px;letter-spacing:5px;color:#aa66ff88;margin-bottom:28px;text-transform:uppercase">Um presente com muito amor 💞❣️</div>'
+    +'<div class="st">Lugar para Voltar</div>'
+    +'<div class="ss">Às vezes, para entender onde estamos,<br>precisamos lembrar de onde tudo começou.</div>'
+    +'<button class="btn" onclick="goMoto()">Começar ›</button>'
+    +'</div>'
+  );
+  fadeIn();
+}
+
+function goMoto(){
+  fadeOut(function(){
+    showS(
+      '<div style="text-align:center;padding:0 24px;max-width:520px;">'
+      +'<div style="font-size:11px;letter-spacing:5px;color:#aa66ff88;margin-bottom:28px;text-transform:uppercase">Hoje — Presente</div>'
+      +'<div class="st" style="font-size:clamp(22px,4vw,42px);margin-bottom:18px;">Na Estrada</div>'
+      +'<div style="font-size:clamp(28px,5vw,52px);margin-bottom:18px;">🏍️</div>'
+      +'<div class="ss">Dia de comemoração, chamego e amor.<br>Hoje seriam 2 anos de comemoração.<br>O vento batia no rosto e a cidade passava rápido.<br><br>Mais um dia. Mais um sorriso esperando no fim do caminho.</div>'
+      +'<button class="btn" onclick="goPortal()">Continuar ›</button>'
+      +'</div>'
+    );
+    fadeIn();
+  });
+}
+
+function goPortal(){
+  fadeOut(function(){
+    showPortal=true;portalT=0;portalAlpha=0;
+    playPortal();
+    showS(
+      '<div style="text-align:center;padding:0 24px;max-width:520px;">'
+      +'<div style="font-size:11px;letter-spacing:5px;color:#aa66ff88;margin-bottom:28px;text-transform:uppercase">??? — Desconhecido</div>'
+      +'<div class="st" style="color:#cc88ff;font-size:clamp(22px,4vw,42px);margin-bottom:16px;">O Portal</div>'
+      +'<div style="font-size:clamp(20px,3vw,32px);letter-spacing:8px;color:#cc88ff88;margin-bottom:22px;">。𖦹°‧. 𓉸. ꩜.</div>'
+      +'<div class="ss">Foi um destelho, uma luz roxa intensa que o fez frear...<br>tentar frear, mas foi tarde demais...<br>a luz o engoliu.<br><br>'
+      +'<em style="color:#cc88ffcc;font-style:italic;">"Para voltar... você precisa lembrar de tudo"</em></div>'
+      +'<button class="btn" onclick="goToPhase1()">Continuar ›</button>'
+      +'</div>'
+    );
+    fadeIn();
+  });
+}
+
+function goToPhase1(){
+  saveProgress(1);
+  fadeOut(function(){
+    window.location.href='fase1-halloween.html';
+  });
+}
+
+// ── CHECK PROGRESS — if returning player, show continue option ────────────────
+var progress=getProgress();
+if(progress>=1){
+  // Returning player — offer to continue
+  var phaseNames=['','Halloween','Carnaval','A Conversa','O Namoro','A Casa','A Aliança','O Final'];
+  var phaseFiles=['','fase1-halloween.html','fase2-carnaval.html','fase3-conversa.html','fase4-namoro.html','fase5-casa.html','fase6-alianca.html','fase7-final.html'];
+  var nextPhase=Math.min(progress+1,7);
+
+  // Only show continue if not at very beginning
+  document.getElementById('sc').innerHTML=
+    '<div style="text-align:center;padding:0 24px;max-width:540px;">'
+    +'<div style="font-size:11px;letter-spacing:5px;color:#aa66ff88;margin-bottom:24px;text-transform:uppercase">Bem-vindo de volta</div>'
+    +'<div class="st">Lugar para Voltar</div>'
+    +'<div class="ss">O portal ainda pulsa.<br>Suas memórias estão esperando.</div>'
+    +'<div style="display:flex;flex-direction:column;gap:12px;align-items:center;">'
+    +'<button class="btn" onclick="continueGame()">Continuar — '+phaseNames[nextPhase<=7?nextPhase:7]+' ›</button>'
+    +'<button class="btn" style="font-size:13px;padding:10px 30px;opacity:.6" onclick="startIntro()">Começar do início</button>'
+    +'</div></div>';
+  sel.classList.remove('hidden');
+  fadeIn();
+
+  window.continueGame=function(){
+    fadeOut(function(){
+      window.location.href=phaseFiles[nextPhase<=7?nextPhase:7];
+    });
+  };
+} else {
+  startIntro();
+  fadeIn();
+}
+</script>
+</body>
+</html>
