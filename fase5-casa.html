@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Lugar para Voltar — Fase 5</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Rajdhani:wght@400;600;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#000;overflow:hidden;font-family:'Rajdhani',sans-serif;color:#fff;user-select:none;}
+canvas{display:block;}
+#ui{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;}
+#hud{position:absolute;top:14px;left:16px;display:none;gap:24px;align-items:center;}
+.hl{font-size:11px;letter-spacing:2px;color:#ffaa44;text-transform:uppercase;}
+.hv{font-size:18px;font-weight:700;color:#fff;}
+#dist-bar-wrap{width:200px;height:10px;background:#1a0a00;border-radius:5px;border:1px solid #ffaa4444;overflow:hidden;}
+#dist-bar{height:100%;background:linear-gradient(90deg,#ff6622,#ffdd44);border-radius:5px;transition:width .1s;}
+#phase-label{position:absolute;top:14px;right:16px;display:none;font-size:13px;color:#ffaa44;letter-spacing:2px;text-align:right;}
+
+#screen{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:all;background:#0d0800;}
+#screen.hidden{display:none;}
+.st{font-family:'Cinzel',serif;font-size:clamp(26px,5vw,50px);color:#ffaa44;text-align:center;margin-bottom:8px;letter-spacing:4px;}
+.ss{font-size:clamp(13px,2vw,17px);color:#bbb;text-align:center;max-width:500px;line-height:1.8;margin-bottom:28px;padding:0 24px;}
+.btn{font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;letter-spacing:3px;text-transform:uppercase;padding:14px 40px;border:2px solid #ffaa44;background:transparent;color:#ffaa44;cursor:pointer;transition:all .2s;border-radius:4px;pointer-events:all;}
+.btn:hover{background:#ffaa44;color:#000;}
+#mb{position:absolute;top:28%;left:50%;transform:translate(-50%,-50%);background:#000d;border:1px solid #ffaa4444;border-radius:8px;padding:14px 22px;font-size:clamp(13px,1.7vw,16px);color:#fff;text-align:center;max-width:420px;line-height:1.7;pointer-events:none;display:none;font-family:'Cinzel',serif;}
+#df{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(255,100,40,.4);display:none;pointer-events:none;}
+
+/* QUIZ */
+#quiz-ov{position:absolute;top:0;left:0;width:100%;height:100%;background:#000f;display:none;flex-direction:column;align-items:center;justify-content:center;pointer-events:all;gap:20px;padding:24px;}
+#quiz-ov.active{display:flex;}
+#quiz-progress{display:flex;gap:10px;}
+.qp-dot{width:14px;height:14px;border-radius:50%;background:#222;border:1px solid #444;transition:all .3s;}
+.qp-dot.done{background:#ffaa44;border-color:#ffaa44;box-shadow:0 0 8px #ffaa4466;}
+.q-title{font-family:'Cinzel',serif;font-size:clamp(14px,2.2vw,20px);color:#ffdd88;text-align:center;max-width:500px;line-height:1.7;}
+.q-subtitle{font-size:13px;color:#888;text-align:center;font-style:italic;}
+#quiz-options{display:flex;flex-direction:column;gap:12px;width:100%;max-width:420px;}
+.q-opt{font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:600;letter-spacing:1px;padding:14px 24px;background:#0d0800;border:2px solid #ffaa4433;border-radius:8px;color:#ffaa44;cursor:pointer;transition:all .18s;pointer-events:all;text-align:left;}
+.q-opt:hover{border-color:#ffaa44;background:#1a1000;}
+.q-opt.correct{border-color:#00ff88;background:#001a0a;color:#00ff88;}
+.q-opt.wrong{border-color:#ff3344;background:#1a0008;color:#ff3344;animation:shk .3s;}
+#quiz-fb{font-size:15px;min-height:22px;text-align:center;letter-spacing:1px;font-weight:700;}
+@keyframes shk{0%,100%{transform:translateX(0);}25%{transform:translateX(-7px);}75%{transform:translateX(7px);}}
+
+/* DOOR / VICTORY */
+#door-ov{position:absolute;top:0;left:0;width:100%;height:100%;background:#000f;display:none;flex-direction:column;align-items:center;justify-content:center;pointer-events:all;gap:22px;padding:24px;}
+#door-ov.active{display:flex;}
+.dp .rv{color:#ffdd88;}
+.dp .cur{display:inline-block;width:2px;height:1em;background:#ffaa44;margin-left:2px;animation:bl .7s infinite;}
+@keyframes bl{0%,100%{opacity:1;}50%{opacity:0;}}
+#vs{position:absolute;top:0;left:0;width:100%;height:100%;background:#0d0800;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;pointer-events:all;}
+#vs.active{display:flex;}
+#go{position:absolute;top:0;left:0;width:100%;height:100%;background:#000c;display:none;flex-direction:column;align-items:center;justify-content:center;gap:20px;pointer-events:all;}
+#go.active{display:flex;}
+@keyframes fu{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+.fu{animation:fu .7s ease forwards;}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+  <div id="hud">
+    <div style="display:flex;flex-direction:column;gap:3px;">
+      <span class="hl">Distância</span>
+      <div id="dist-bar-wrap"><div id="dist-bar" style="width:0%"></div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:3px;">
+      <span class="hl">Vidas</span>
+      <span class="hv" id="lv">❤️❤️❤️</span>
+    </div>
+  </div>
+  <div id="phase-label">
+    <div id="phase-name">Fase 1 — Chegada</div>
+    <div style="font-size:11px;color:#666;margin-top:2px;">Espaço / ↑ — Pular</div>
+  </div>
+  <div id="mb"></div>
+  <div id="df"></div>
+
+  <div id="quiz-ov">
+    <div style="font-family:'Cinzel',serif;font-size:clamp(18px,3vw,26px);color:#ffaa44;letter-spacing:3px;text-align:center;">🏠 Quiz da Casa</div>
+    <div style="font-size:12px;color:#ffaa4455;letter-spacing:2px;font-style:italic;">Só quem mora junto sabe...</div>
+    <div id="quiz-progress"></div>
+    <div class="q-title" id="q-title"></div>
+    <div class="q-subtitle" id="q-sub"></div>
+    <div id="quiz-options"></div>
+    <div id="quiz-fb"></div>
+  </div>
+
+  <div id="door-ov">
+    <div style="font-family:'Cinzel',serif;font-size:clamp(19px,3vw,28px);color:#ffaa44;letter-spacing:3px;text-align:center;">🏠 A Casa, a Vida, os Dois</div>
+    <div class="dp" style="font-size:clamp(14px,2vw,19px);color:#fff;text-align:center;max-width:580px;line-height:2;font-style:italic;min-height:54px;" id="dph"></div>
+    <div style="font-size:13px;color:#aaa;text-align:center;max-width:380px;line-height:1.7;" id="dsb"></div>
+    <button class="btn" id="dcb" style="display:none;">Continuar ›</button>
+  </div>
+
+  <div id="vs">
+    <div class="fu" style="font-size:12px;letter-spacing:4px;color:#ffaa44;text-transform:uppercase;">Julho de 2024</div>
+    <div class="fu" style="font-family:'Cinzel',serif;font-size:clamp(22px,4vw,40px);color:#fff;text-align:center;">A Casa dos Dois</div>
+    <canvas id="ac" width="340" height="210" style="border:1.5px solid #ffaa4433;border-radius:10px;"></canvas>
+    <div class="fu" style="font-size:clamp(13px,1.8vw,16px);color:#ccc;text-align:center;max-width:460px;line-height:1.9;padding:0 24px;font-style:italic;" id="vm"></div>
+    <button class="btn fu" id="nb">Próxima Fase →</button>
+  </div>
+
+  <div id="go">
+    <div class="st" style="font-size:clamp(22px,4vw,34px);color:#ff8844;">Caiu!</div>
+    <div class="ss">Os obstáculos foram demais desta vez.<br>Mas a casa ainda está lá.</div>
+    <button class="btn" id="rb">Tentar Novamente</button>
+  </div>
+
+  <div id="screen"><div id="sc"></div></div>
+</div>
+<script>
+// ── AUDIO ────────────────────────────────────────────────────────────────────
+var AC=new(window.AudioContext||window.webkitAudioContext)();
+document.addEventListener('click',function(){if(AC.state==='suspended')AC.resume();});
+document.addEventListener('keydown',function(){if(AC.state==='suspended')AC.resume();});
+function snd(t){
+  try{
+    var g=AC.createGain(),o=AC.createOscillator(),n=AC.currentTime;
+    o.connect(g);g.connect(AC.destination);
+    if(t==='jump'){o.type='sine';o.frequency.setValueAtTime(360,n);o.frequency.exponentialRampToValueAtTime(600,n+.12);g.gain.setValueAtTime(.12,n);g.gain.exponentialRampToValueAtTime(.001,n+.14);o.start();o.stop(n+.14);}
+    else if(t==='land'){o.type='square';o.frequency.setValueAtTime(120,n);o.frequency.exponentialRampToValueAtTime(60,n+.07);g.gain.setValueAtTime(.08,n);g.gain.exponentialRampToValueAtTime(.001,n+.09);o.start();o.stop(n+.09);}
+    else if(t==='hit'){o.type='sawtooth';o.frequency.setValueAtTime(220,n);o.frequency.exponentialRampToValueAtTime(60,n+.12);g.gain.setValueAtTime(.18,n);g.gain.exponentialRampToValueAtTime(.001,n+.15);o.start();o.stop(n+.15);}
+    else if(t==='quiz_ok'){[523,659,784].forEach(function(f,i){var oo=AC.createOscillator(),gg=AC.createGain();oo.connect(gg);gg.connect(AC.destination);oo.type='sine';oo.frequency.value=f;var tt=n+i*.1;gg.gain.setValueAtTime(.14,tt);gg.gain.exponentialRampToValueAtTime(.001,tt+.2);oo.start(tt);oo.stop(tt+.2);});}
+    else if(t==='quiz_fail'){o.type='square';o.frequency.setValueAtTime(200,n);o.frequency.exponentialRampToValueAtTime(80,n+.28);g.gain.setValueAtTime(.16,n);g.gain.exponentialRampToValueAtTime(.001,n+.3);o.start();o.stop(n+.3);}
+    else if(t==='victory'){[523,659,784,988,1047].forEach(function(f,i){var oo=AC.createOscillator(),gg=AC.createGain();oo.connect(gg);gg.connect(AC.destination);oo.type='sine';oo.frequency.value=f;var tt=n+i*.14;gg.gain.setValueAtTime(.15,tt);gg.gain.exponentialRampToValueAtTime(.001,tt+.3);oo.start(tt);oo.stop(tt+.3);});}
+    else if(t==='note'){o.type='sine';o.frequency.setValueAtTime(800,n);o.frequency.exponentialRampToValueAtTime(1000,n+.08);g.gain.setValueAtTime(.1,n);g.gain.exponentialRampToValueAtTime(.001,n+.12);o.start();o.stop(n+.12);}
+  }catch(e){}
+}
+
+// ── CANVAS ───────────────────────────────────────────────────────────────────
+var cv=document.getElementById('c'),ctx=cv.getContext('2d'),W,H;
+function resize(){W=cv.width=window.innerWidth;H=cv.height=window.innerHeight;}
+resize();window.addEventListener('resize',resize);
+
+// ── STATE ────────────────────────────────────────────────────────────────────
+var gs='intro',lives=3,dist=0,GOAL=3000,gt=0;
+var gamePhase=1; // 1=calm 2=medium 3=chaos
+var spawnTimer=0,spawnRate=90;
+var bgScrollX=0,speed=3;
+
+// ── INPUT ────────────────────────────────────────────────────────────────────
+var ks={};
+window.addEventListener('keydown',function(e){ks[e.code]=true;['Space','ArrowUp'].indexOf(e.code)>=0&&e.preventDefault();});
+window.addEventListener('keyup',function(e){ks[e.code]=false;});
+cv.addEventListener('click',function(){if(gs==='playing'&&runner.og)doJump();});
+
+// ── RUNNER ───────────────────────────────────────────────────────────────────
+var runner={
+  x:120,y:0,w:30,h:44,
+  vy:0,og:false,jl:2,
+  jp:-16,
+  af:0,at:0,iframes:0,
+};
+
+// ── OBSTACLES ────────────────────────────────────────────────────────────────
+var obs=[];
+var particles=[];
+
+// Room background elements (drawn as scenery)
+var roomItems=[
+  {type:'window',x:.7,y:.15,w:80,h:100},
+  {type:'shelf',x:.85,y:.3,w:120,h:20},
+  {type:'tv',x:.15,y:.4,w:100,h:70},
+  {type:'board',x:.5,y:.2,w:80,h:60},
+];
+// Floating notes (decoration)
+var notes=[];
+for(var i=0;i<5;i++) notes.push({x:Math.random()*2000+500,y:.15+Math.random()*.3,bobT:Math.random()*6.28,txt:['❤️','📝','😊','💕','✨'][i]});
+
+// Floor Y
+function FY(){return Math.round(H*.78);}
+
+// ── OBSTACLE TYPES ───────────────────────────────────────────────────────────
+// Each obstacle is a visual object with a hitbox
+var OTYPES=[
+  // Phase 1 — gentle
+  {id:'box',    label:'📦',w:40,h:50,score:10,phase:1},
+  {id:'book',   label:'📚',w:35,h:45,score:10,phase:1},
+  {id:'pillow', label:'🛋️',w:50,h:35,score:10,phase:1},
+  // Phase 2 — medium
+  {id:'anime',  label:'📺',w:45,h:55,score:15,phase:2},
+  {id:'chair',  label:'🪑',w:40,h:60,score:15,phase:2},
+  {id:'bag',    label:'🎒',w:38,h:48,score:15,phase:2},
+  // Phase 3 — chaos (tall + fast)
+  {id:'mattress',label:'🛏️',w:70,h:40,score:25,phase:3},
+  {id:'lamp',   label:'💡',w:25,h:70,score:25,phase:3},
+  {id:'caixa',  label:'🗃️',w:55,h:65,score:25,phase:3},
+];
+
+function getObstacleTypes(){
+  return OTYPES.filter(function(o){return o.phase<=gamePhase;});
+}
+
+function spawnObs(){
+  var types=getObstacleTypes();
+  var t=types[Math.floor(Math.random()*types.length)];
+  var fy=FY();
+  obs.push({
+    x:W+60,
+    y:fy-t.h,
+    w:t.w,h:t.h,
+    label:t.label,
+    score:t.score,
+    passed:false,
+  });
+  // Phase 3: sometimes spawn 2 stacked
+  if(gamePhase===3&&Math.random()>.55){
+    var t2=types[Math.floor(Math.random()*types.length)];
+    obs.push({x:W+60+t.w+20,y:fy-t2.h,w:t2.w,h:t2.h,label:t2.label,score:t2.score,passed:false});
+  }
+}
+
+function doJump(){
+  if(runner.jl<=0)return;
+  snd('jump');
+  runner.vy=runner.jp+(runner.jl===1?3:0);
+  runner.jl--;runner.og=false;
+}
+
+// ── MAIN LOOP ─────────────────────────────────────────────────────────────────
+var lt=0;
+function loop(ts){
+  var dt=Math.min((ts-lt)/16.67,3);lt=ts;
+  ctx.clearRect(0,0,W,H);
+  if(gs==='playing')update(dt);
+  draw(dt);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+function update(dt){
+  gt+=dt;
+
+  // Jump input
+  if(ks['Space']||ks['ArrowUp']||ks['KeyW']) doJump();
+  ks['Space']=false;ks['ArrowUp']=false;ks['KeyW']=false; // consume
+
+  // Phase progression based on distance
+  var progress=dist/GOAL;
+  if(progress<.33){gamePhase=1;speed=3+progress*3;}
+  else if(progress<.66){
+    if(gamePhase<2){gamePhase=2;showMsg('🌀 A vida a dois começa a ficar caótica... 😄',1800);}
+    speed=4+progress*4;
+  } else {
+    if(gamePhase<3){gamePhase=3;showMsg('🔥 CAOS TOTAL! Bem-vindo à vida a dois! 😂',1800);}
+    speed=6+progress*5;
+  }
+  speed=Math.min(speed,14);
+  spawnRate=Math.max(35,90-progress*60);
+
+  // Distance
+  dist+=speed*dt*.5;
+  if(dist>=GOAL){triggerQuiz();return;}
+  document.getElementById('dist-bar').style.width=(dist/GOAL*100)+'%';
+
+  // Phase label
+  document.getElementById('phase-name').textContent=
+    gamePhase===1?'Fase 1 — A Chegada 🏠':
+    gamePhase===2?'Fase 2 — Vida a Dois 💕':
+    'Fase 3 — CAOS TOTAL! 🔥';
+
+  // Runner physics
+  runner.vy=Math.min(runner.vy+0.7*dt,18);
+  runner.y+=runner.vy*dt;
+  var fy=FY();
+  var wasG=runner.og;runner.og=false;
+  if(runner.y+runner.h>=fy){
+    runner.y=fy-runner.h;runner.vy=0;runner.og=true;runner.jl=2;
+    if(!wasG)snd('land');
+  }
+  if(runner.iframes>0)runner.iframes-=dt;
+
+  // Spawn obstacles
+  spawnTimer-=dt;
+  if(spawnTimer<=0){spawnObs();spawnTimer=spawnRate;}
+
+  // Move obstacles
+  obs=obs.filter(function(o){
+    o.x-=speed*dt;
+    // Collision
+    if(runner.iframes<=0&&o.x<runner.x+runner.w-6&&o.x+o.w>runner.x+6&&o.y<runner.y+runner.h-6&&o.y+o.h>runner.y+6){
+      snd('hit');runner.iframes=60;lives--;updateHUD();
+      burst(runner.x+runner.w/2,runner.y+runner.h/2,['#ff8844','#ffdd44'],10);
+      var f=document.getElementById('df');f.style.display='block';setTimeout(function(){f.style.display='none';},200);
+      if(lives<=0){gs='gameover';document.getElementById('go').classList.add('active');return false;}
+      return false;
+    }
+    return o.x+o.w>-20;
+  });
+
+  // Scroll bg
+  bgScrollX+=speed*dt*.6;
+
+  // Particles
+  particles=particles.filter(function(p){p.x-=speed*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=.15*dt;p.life-=dt;return p.life>0;});
+
+  // Runner anim
+  runner.at+=dt;if(runner.at>6){runner.at=0;runner.af=(runner.af+1)%4;}
+}
+
+function burst(x,y,cs,n){
+  for(var i=0;i<n;i++){var a=Math.random()*6.28,s=Math.random()*4+1;particles.push({x:x,y:y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-2,r:Math.random()*4+2,life:22,maxLife:22,color:cs[Math.floor(Math.random()*cs.length)]});}
+}
+
+function updateHUD(){
+  var s='';for(var i=0;i<Math.max(0,lives);i++)s+='❤️';for(var i=lives;i<3;i++)s+='🖤';
+  document.getElementById('lv').textContent=s||'💀';
+}
+
+// ── DRAW ─────────────────────────────────────────────────────────────────────
+function draw(dt){
+  var fy=FY();
+
+  // Room background — warm home colors
+  // Wall gradient
+  var wallGrad=ctx.createLinearGradient(0,0,0,fy);
+  wallGrad.addColorStop(0,'#1a0e06');
+  wallGrad.addColorStop(1,'#2a1a0a');
+  ctx.fillStyle=wallGrad;ctx.fillRect(0,0,W,fy);
+
+  // Wallpaper subtle pattern
+  ctx.strokeStyle='rgba(255,180,80,0.04)';ctx.lineWidth=1;
+  for(var x=0;x<W;x+=60){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,fy);ctx.stroke();}
+  for(var y=0;y<fy;y+=60){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+
+  // Window
+  var wx=W*.72-(bgScrollX*.1%W*.3);
+  ctx.fillStyle='#0d1a2a';ctx.fillRect(wx,H*.08,90,120);
+  ctx.strokeStyle='#5a3a1a';ctx.lineWidth=4;ctx.strokeRect(wx,H*.08,90,120);
+  // Window: city lights outside
+  for(var i=0;i<8;i++){
+    ctx.fillStyle='rgba(255,220,100,'+(Math.random()>.3?.4:.1)+')';
+    ctx.fillRect(wx+8+Math.floor(i/2)*22,H*.12+(i%2)*30,18,12);
+  }
+  ctx.strokeStyle='#5a3a1a';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(wx+45,H*.08);ctx.lineTo(wx+45,H*.08+120);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(wx,H*.08+60);ctx.lineTo(wx+90,H*.08+60);ctx.stroke();
+
+  // Whiteboard with phrase
+  var bx=W*.42-(bgScrollX*.05%W*.2);
+  ctx.fillStyle='#f0f0ee';ctx.fillRect(bx,H*.12,110,70);
+  ctx.strokeStyle='#8a6030';ctx.lineWidth=3;ctx.strokeRect(bx,H*.12,110,70);
+  ctx.fillStyle='#2255aa';ctx.font='bold 10px Rajdhani';ctx.textAlign='center';
+  ctx.fillText('você é minha',bx+55,H*.12+30);
+  ctx.fillText('escolha ❤️',bx+55,H*.12+46);
+  ctx.fillStyle='#aa3333';ctx.font='9px Rajdhani';
+  ctx.fillText('— Matheus',bx+55,H*.12+60);
+
+  // Floating sticky notes
+  notes.forEach(function(note){
+    note.bobT+=.02;
+    var nx=((note.x-bgScrollX*.15)%W+W)%W;
+    var ny=note.y*H+Math.sin(note.bobT)*5;
+    ctx.save();ctx.translate(nx,ny);ctx.rotate(Math.sin(note.bobT*.5)*.1);
+    ctx.fillStyle='#fff9c4';ctx.fillRect(-18,-18,36,36);
+    ctx.strokeStyle='#ccb020';ctx.lineWidth=1;ctx.strokeRect(-18,-18,36,36);
+    ctx.font='18px serif';ctx.textAlign='center';ctx.fillText(note.txt,0,7);
+    ctx.restore();
+  });
+
+  // TV with anime
+  var tvx=W*.1-(bgScrollX*.08%W*.15);
+  ctx.fillStyle='#1a1a1a';ctx.fillRect(tvx,H*.35,110,75);
+  ctx.strokeStyle='#555';ctx.lineWidth=2;ctx.strokeRect(tvx,H*.35,110,75);
+  // TV screen — colorful anime flash
+  var tvColors=['#ff66aa','#6644ff','#44aaff','#ffdd00'];
+  ctx.fillStyle=tvColors[Math.floor(gt*.1)%tvColors.length]+'44';
+  ctx.fillRect(tvx+5,H*.35+5,100,65);
+  ctx.fillStyle='rgba(255,255,255,0.08)';ctx.font='bold 9px Rajdhani';ctx.textAlign='center';
+  ctx.fillText('Dá da Dan 🎌',tvx+55,H*.35+40);
+
+  // Bookshelf
+  var shx=W*.88-(bgScrollX*.05%W*.1);
+  ctx.fillStyle='#5a3010';ctx.fillRect(shx,H*.2,130,20);ctx.fillRect(shx,H*.35,130,20);
+  ['📕','📗','📘','📙','📒'].forEach(function(b,i){
+    ctx.font='16px serif';ctx.textAlign='left';ctx.fillText(b,shx+5+i*24,H*.32);
+  });
+  ['📺','🎮','📦','🗿'].forEach(function(b,i){
+    ctx.font='16px serif';ctx.textAlign='left';ctx.fillText(b,shx+5+i*30,H*.5);
+  });
+
+  // Mattress on floor hint (background)
+  ctx.fillStyle='#3a2a1a';ctx.fillRect(W*.35-(bgScrollX*.04%W*.4),fy-18,160,12);
+  ctx.fillStyle='rgba(255,200,150,0.1)';ctx.fillRect(W*.35-(bgScrollX*.04%W*.4),fy-22,160,4);
+
+  // Floor
+  ctx.fillStyle='#3a2000';ctx.fillRect(0,fy,W,H-fy);
+  ctx.fillStyle='#4a2a08';ctx.fillRect(0,fy,W,8);
+  // Floor planks
+  ctx.strokeStyle='rgba(80,40,0,0.4)';ctx.lineWidth=1;
+  for(var fx=(-bgScrollX*1.2%80+80)%80;fx<W;fx+=80){ctx.beginPath();ctx.moveTo(fx,fy);ctx.lineTo(fx,H);ctx.stroke();}
+
+  // Particles
+  particles.forEach(function(p){
+    var a=p.life/p.maxLife;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.r*a,0,Math.PI*2);
+    ctx.fillStyle=p.color+Math.floor(a*200).toString(16).padStart(2,'0');ctx.fill();
+  });
+
+  // Obstacles
+  obs.forEach(function(o){
+    ctx.font=(o.h*.85)+'px serif';ctx.textAlign='center';
+    ctx.fillText(o.label,o.x+o.w/2,o.y+o.h*.9);
+    // Subtle hitbox debug (remove in prod)
+    // ctx.strokeStyle='#f004';ctx.strokeRect(o.x,o.y,o.w,o.h);
+  });
+
+  // Runner character
+  if(gs==='playing'||(runner.iframes>0&&Math.floor(gt*3)%2===0)||runner.iframes===0){
+    drawRunner();
+  }
+}
+
+function drawRunner(){
+  var rx=runner.x,ry=runner.y,f=1; // always faces right
+  ctx.save();ctx.translate(rx+runner.w/2,ry+runner.h);
+  // Shadow
+  ctx.beginPath();ctx.ellipse(0,2,14,5,0,0,Math.PI*2);ctx.fillStyle='rgba(0,0,0,0.3)';ctx.fill();
+  ctx.translate(0,-runner.h);
+  // Running legs
+  var lo=runner.og?Math.sin(runner.af*1.8)*8:0;
+  ctx.fillStyle='#4a6ee0';
+  ctx.fillRect(-11,runner.h-16,9,16+lo);
+  ctx.fillRect(2,runner.h-16,9,16-lo);
+  // Body
+  ctx.fillRect(-11,runner.h*.28,22,runner.h*.54);
+  // Head
+  ctx.beginPath();ctx.arc(0,runner.h*.14,11,0,Math.PI*2);ctx.fill();
+  // Eye
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(4,runner.h*.14,2.5,0,Math.PI*2);ctx.fill();
+  // Arm pumping
+  var armSwing=runner.og?Math.sin(runner.af*1.8)*10:0;
+  ctx.fillStyle='#4a6ee0';ctx.fillRect(10,runner.h*.32+armSwing,9,12);
+  ctx.restore();
+}
+
+// ── SCREENS ──────────────────────────────────────────────────────────────────
+var sel=document.getElementById('screen');
+function showS(h){sel.classList.remove('hidden');document.getElementById('sc').innerHTML=h;}
+function hideS(){sel.classList.add('hidden');}
+function showMsg(t,d){var m=document.getElementById('mb');m.innerHTML=t;m.style.display='block';clearTimeout(showMsg._t);showMsg._t=setTimeout(function(){m.style.display='none';},d);}
+
+function startIntro(){
+  gs='intro';
+  showS('<div style="text-align:center;padding:0 24px;max-width:540px;">'
+    +'<div style="font-size:11px;letter-spacing:5px;color:#ffaa44;margin-bottom:20px;text-transform:uppercase">Fase 5 — Julho de 2024</div>'
+    +'<div class="st">A Casa dos Dois</div>'
+    +'<div class="ss">Foi uma escolha, mas isso não a torna menos asustadora <br> Sem cama, sem guarda-roupa mas com muita historia pela frente</div>'
+    +'<button class="btn" onclick="goC1()">Continuar ›</button></div>');
+}
+function goC1(){
+  showS('<div style="text-align:center;padding:0 24px;max-width:520px;">'
+    +'<div style="font-size:11px;letter-spacing:4px;color:#ffaa44;margin-bottom:18px;text-transform:uppercase">A Chegada</div>'
+    +'<div class="st" style="font-size:clamp(20px,3.5vw,34px);margin-bottom:14px">Uma Caixa e Uma Escolha</div>'
+    +'<div class="ss">Ele escolheu ficar.<br>Trouxe 3 anos de vida numa caixa.<br>Tinham um colchão no chão e mil aventuras pela frente.<br><br>'
+    +'Ela deixa notinhas na marmita.<br>Ele escreve frases no quadro branco.<br>'
+    +'<em style="color:#ffaa8888">São diferentes — mas funcionam.</em></div>'
+    +'<div style="font-size:13px;color:#888;margin-bottom:18px;">Espaço / ↑ — Pular &nbsp;|&nbsp; Pulo duplo disponível!</div>'
+    +'<button class="btn" onclick="goPlay()">🏃 Correr ›</button></div>');
+}
+
+function goPlay(){
+  hideS();gs='playing';lives=3;dist=0;gamePhase=1;speed=3;
+  obs=[];particles=[];spawnTimer=60;bgScrollX=0;
+  runner.y=FY()-runner.h;runner.vy=0;runner.og=true;runner.jl=2;runner.iframes=0;
+  document.getElementById('hud').style.display='flex';
+  document.getElementById('phase-label').style.display='block';
+  updateHUD();
+  setTimeout(function(){showMsg('🏠 Corra pela casa — desvie dos obstáculos!',2600);},400);
+}
+
+// ── QUIZ ─────────────────────────────────────────────────────────────────────
+var QUESTIONS=[
+  {
+    q:'Qual o lado da cama do Matheus?',
+    sub:'(ou do colchão no chão... 😄)',
+    opts:['Lado esquerdo','Lado direito','No meio','Não tem lado fixo'],
+    answer:1,
+  },
+  {
+    q:'Qual a comida favorita que ela faz para ele?',
+    sub:'(a que vai na marmita com notinha)',
+    opts:['Macarrão','Arroz com frango','Strogonoff','Pizza caseira'],
+    answer:2,
+  },
+  {
+    q:'Qual a série que os dois assistem juntos?',
+    sub:'(mesmo com gostos bem diferentes...)',
+    opts:['Stranger Things','La Casa de Papel','Dá da Dan','Breaking Bad'],
+    answer:2,
+  },
+];
+var qIdx=0;
+
+function triggerQuiz(){
+  gs='quiz';
+  document.getElementById('hud').style.display='none';
+  document.getElementById('phase-label').style.display='none';
+  qIdx=0;
+  showQuizQuestion();
+  document.getElementById('quiz-ov').classList.add('active');
+}
+
+function showQuizQuestion(){
+  var q=QUESTIONS[qIdx];
+  // Progress dots
+  var prog=document.getElementById('quiz-progress');
+  prog.innerHTML='';
+  QUESTIONS.forEach(function(_,i){
+    var d=document.createElement('div');
+    d.className='qp-dot'+(i<qIdx?' done':'');
+    prog.appendChild(d);
+  });
+  document.getElementById('q-title').textContent=q.q;
+  document.getElementById('q-sub').textContent=q.sub;
+  document.getElementById('quiz-fb').textContent='';
+  // Options
+  var optsEl=document.getElementById('quiz-options');
+  optsEl.innerHTML='';
+  q.opts.forEach(function(opt,i){
+    var b=document.createElement('button');
+    b.className='q-opt';b.textContent=opt;
+    b.onclick=function(){selectAnswer(i,b);};
+    optsEl.appendChild(b);
+  });
+}
+
+function selectAnswer(idx,btn){
+  var q=QUESTIONS[qIdx];
+  var fb=document.getElementById('quiz-fb');
+  // Disable all buttons
+  document.querySelectorAll('.q-opt').forEach(function(b){b.onclick=null;});
+  if(idx===q.answer){
+    snd('quiz_ok');
+    btn.classList.add('correct');
+    var msgs=['✓ Lado direito — o lugar dele! 💛','✓ Strogonoff! O favorito! 🍲','✓ Dá da Dan — a série de vocês! 🎌'];
+    fb.style.color='#00ff88';fb.textContent=msgs[qIdx];
+    setTimeout(function(){
+      qIdx++;
+      if(qIdx<QUESTIONS.length) showQuizQuestion();
+      else{
+        document.getElementById('quiz-ov').classList.remove('active');
+        openDoor();
+      }
+    },1200);
+  } else {
+    snd('quiz_fail');
+    btn.classList.add('wrong');
+    fb.style.color='#ff3344';fb.textContent='✗ Não é essa... tente de novo!';
+    setTimeout(function(){
+      btn.classList.remove('wrong');btn.onclick=function(){selectAnswer(idx,btn);};
+      document.querySelectorAll('.q-opt').forEach(function(b,i){b.onclick=function(){selectAnswer(i,b);};});
+      fb.textContent='';
+    },800);
+  }
+}
+
+// ── DOOR SCENE ────────────────────────────────────────────────────────────────
+var PHRASE='ele trouxe 3 anos numa caixa e encontrou um lar';
+var pi=0,piv=null;
+function openDoor(){
+  gs='door';
+  var ov=document.getElementById('door-ov');
+  document.getElementById('dph').innerHTML='<span class="cur"></span>';
+  document.getElementById('dsb').textContent='';
+  document.getElementById('dcb').style.display='none';
+  ov.classList.add('active');
+  pi=0;setTimeout(revPhrase,900);
+}
+function revPhrase(){
+  clearInterval(piv);
+  piv=setInterval(function(){
+    pi++;
+    var sh=PHRASE.substring(0,pi),rs=PHRASE.substring(pi);
+    document.getElementById('dph').innerHTML='<span class="rv">"'+sh+'</span>'+(rs.length?'<span class="cur"></span>':'"');
+    if(pi>=PHRASE.length){
+      clearInterval(piv);
+      setTimeout(function(){
+        document.getElementById('dsb').textContent='— Julho de 2024. Uma caixa. Um colchão. Uma casa.';
+        document.getElementById('dcb').style.display='block';
+      },900);
+    }
+  },55);
+}
+document.getElementById('dcb').addEventListener('click',function(){
+  document.getElementById('door-ov').classList.remove('active');
+  triggerVictory();
+});
+
+// ── VICTORY ───────────────────────────────────────────────────────────────────
+function triggerVictory(){
+  gs='victory';snd('victory');
+  document.getElementById('vs').classList.add('active');
+  document.getElementById('vm').innerHTML=
+    'Ele escolheu ficar. Trouxe 3 anos numa caixa.<br>'
+    +'Notinhas na marmita. Frases no quadro branco.<br>'
+    +'Anime e livros no mesmo cômodo.<br><br>'
+    +'<em style="color:#ffaa44">Diferentes em tudo — perfeitos juntos. 🏠💕</em>';
+  runVictAnim();
+}
+
+function runVictAnim(){
+  var ac=document.getElementById('ac'),a=ac.getContext('2d'),t=0;
+  var hts=[];for(var i=0;i<16;i++)hts.push({x:Math.random()*340,y:230,vy:-(Math.random()*1.1+.4),vx:(Math.random()-.5)*.5,al:.8,sz:Math.random()*10+5,col:Math.random()<.5?'#ffdd44':'#ffaa22'});
+  var notes2=[{x:60,y:80,txt:'❤️'},{x:200,y:60,txt:'📝'},{x:280,y:90,txt:'💕'}];
+  function hrt(c,x,y,sz,al,col){c.save();c.globalAlpha=al;c.fillStyle=col;c.translate(x,y);c.scale(sz/10,sz/10);c.beginPath();c.moveTo(0,-3);c.bezierCurveTo(5,-8,10,-4,0,5);c.bezierCurveTo(-10,-4,-5,-8,0,-3);c.fill();c.restore();}
+  function frame(){
+    if(gs!=='victory')return;t++;
+    a.clearRect(0,0,340,210);
+    // Warm room background
+    var wg=a.createLinearGradient(0,0,0,210);wg.addColorStop(0,'#1a0e06');wg.addColorStop(1,'#2a1a0a');
+    a.fillStyle=wg;a.fillRect(0,0,340,210);
+    // Floor
+    a.fillStyle='#3a2000';a.fillRect(0,170,340,40);a.fillStyle='#4a2a08';a.fillRect(0,170,340,6);
+    // Mattress on floor
+    a.fillStyle='#4a3520';a.fillRect(60,155,220,18);a.fillStyle='rgba(255,200,150,0.15)';a.fillRect(60,152,220,5);
+    // Whiteboard
+    a.fillStyle='#f0f0ee';a.fillRect(230,20,95,60);a.strokeStyle='#8a6030';a.lineWidth=2;a.strokeRect(230,20,95,60);
+    a.fillStyle='#2255aa';a.font='bold 9px Rajdhani';a.textAlign='center';
+    a.fillText('você é minha',277,44);a.fillText('escolha ❤️',277,58);
+
+    // Box
+    a.fillStyle='#8a6030';a.fillRect(40,140,40,32);a.strokeStyle='#5a3010';a.lineWidth=1;a.strokeRect(40,140,40,32);
+    a.font='12px serif';a.textAlign='center';a.fillText('📦',60,162);
+
+    // Two figures on mattress
+    var prog=Math.min(1,t/60);
+    var lx=140+prog*10,rx=205-prog*10;
+    // Matheus
+    a.fillStyle='#4a6ee0';a.beginPath();a.arc(lx,148,12,0,Math.PI*2);a.fill();a.fillRect(lx-9,159,18,14);
+    // Magali
+    a.fillStyle='#7744aa';a.beginPath();a.arc(rx,148,12,0,Math.PI*2);a.fill();a.beginPath();a.moveTo(rx-9,159);a.lineTo(rx+9,159);a.lineTo(rx+12,173);a.lineTo(rx-12,173);a.closePath();a.fill();
+    // Heart
+    if(prog>.6){var hp=Math.min(1,(prog-.6)/.4);hrt(a,(lx+rx)/2,132,12*hp,hp*.9,'#ffdd44');}
+
+    // Floating notes
+    notes2.forEach(function(n){
+      a.save();a.translate(n.x,n.y+Math.sin(t*.05+n.x)*.4);a.rotate(Math.sin(t*.03+n.x)*.08);
+      a.fillStyle='#fff9c4';a.fillRect(-14,-14,28,28);a.strokeStyle='#ccb020';a.lineWidth=1;a.strokeRect(-14,-14,28,28);
+      a.font='14px serif';a.textAlign='center';a.fillText(n.txt,0,5);a.restore();
+    });
+
+    hts.forEach(function(h){h.y+=h.vy;h.x+=h.vx;h.al-=.003;if(h.y<-20||h.al<=0){h.y=230;h.x=Math.random()*340;h.al=.7;}hrt(a,h.x,h.y,h.sz,h.al,h.col);});
+    if(t>55){a.globalAlpha=Math.min(1,(t-55)/25);a.fillStyle='#ffaa44';a.font='bold 11px Rajdhani';a.textAlign='center';a.fillText('Julho 2024 — Uma caixa, um lar 🏠',170,200);a.globalAlpha=1;}
+    requestAnimationFrame(frame);
+  }
+  frame();
+}
+
+document.getElementById('nb').addEventListener('click',function(){
+  document.getElementById('vs').classList.remove('active');
+  showS('<div style="text-align:center;padding:0 24px;max-width:480px;">'
+    +'<div style="font-size:11px;letter-spacing:4px;color:#ffaa44;margin-bottom:14px;text-transform:uppercase">Fase 5 Concluída ✓</div>'
+    +'<div class="st" style="font-size:clamp(18px,3vw,30px);margin-bottom:14px;color:#ffcc66">Memória Desbloqueada</div>'
+    +'<div class="ss">A casa estava salva na memória.<br>O portal pulsou — quente como um lar.<br><br>'
+    +'<span style="color:#ffaa44;font-style:italic">A Fase 6 — A Aliança está chegando. 💍</span></div>'
+    +'<button class="btn" onclick="startIntro()" style="margin-top:8px">Jogar Novamente ↺</button></div>');
+});
+
+document.getElementById('rb').addEventListener('click',function(){
+  document.getElementById('go').classList.remove('active');
+  document.getElementById('hud').style.display='none';
+  document.getElementById('phase-label').style.display='none';
+  startIntro();
+});
+
+startIntro();
+</script>
+</body>
+</html>

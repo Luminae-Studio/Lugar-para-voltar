@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lugar para Voltar — Fase 2</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Rajdhani:wght@400;600;700&family=Bebas+Neue&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#000;overflow:hidden;font-family:'Rajdhani',sans-serif;color:#fff;user-select:none;}
+canvas{display:block;}
+#ui{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;}
+
+#hud{position:absolute;top:16px;left:16px;display:none;gap:24px;align-items:center;}
+.hud-label{font-size:11px;letter-spacing:2px;color:#ffdd00;text-transform:uppercase;}
+.hud-val{font-size:20px;font-weight:700;color:#fff;}
+#health-bar-wrap{width:160px;height:10px;background:#220;border-radius:5px;border:1px solid #ff06;overflow:hidden;}
+#health-bar{height:100%;background:linear-gradient(90deg,#ff3366,#ff6699);border-radius:5px;transition:width 0.2s;}
+#wave-info{position:absolute;top:16px;right:16px;text-align:right;display:none;}
+#wave-num{font-size:28px;font-weight:700;color:#ffdd00;}
+#combo-display{position:absolute;top:60px;right:16px;text-align:right;display:none;pointer-events:none;}
+#combo-val{font-size:22px;font-weight:700;color:#ff3366;text-shadow:0 0 12px #ff336688;}
+
+#screen{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:all;background:#08001a;}
+#screen.hidden{display:none;}
+.screen-title{font-family:'Cinzel',serif;font-size:clamp(26px,5vw,50px);color:#ffdd00;text-align:center;margin-bottom:8px;letter-spacing:4px;}
+.screen-sub{font-size:clamp(13px,2vw,17px);color:#bbb;text-align:center;max-width:500px;line-height:1.8;margin-bottom:28px;padding:0 24px;}
+.btn{font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;letter-spacing:3px;text-transform:uppercase;padding:14px 40px;border:2px solid #ffdd00;background:transparent;color:#ffdd00;cursor:pointer;transition:all 0.2s;border-radius:4px;pointer-events:all;}
+.btn:hover{background:#ffdd00;color:#000;}
+.btn-pink{border-color:#ff3366;color:#ff3366;}
+.btn-pink:hover{background:#ff3366;color:#fff;}
+
+#controls-hint{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);font-size:12px;color:#444;letter-spacing:2px;text-transform:uppercase;display:none;pointer-events:none;white-space:nowrap;}
+#message-box{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#000d;border:1px solid #ffdd0044;border-radius:8px;padding:20px 32px;font-size:clamp(14px,2vw,18px);color:#fff;text-align:center;max-width:480px;line-height:1.7;pointer-events:none;display:none;font-family:'Cinzel',serif;}
+
+/* WORD PUZZLE ENIGMA */
+#enigma-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:#000e;display:none;flex-direction:column;align-items:center;justify-content:center;pointer-events:all;gap:20px;padding:24px;}
+#enigma-overlay.active{display:flex;}
+.enigma-title{font-family:'Cinzel',serif;font-size:clamp(18px,3vw,28px);color:#ffdd00;letter-spacing:3px;text-align:center;}
+.enigma-story{font-size:clamp(13px,1.8vw,16px);color:#ddd;text-align:center;max-width:500px;line-height:1.9;font-style:italic;}
+.enigma-instruction{font-size:clamp(12px,1.6vw,14px);color:#ffcc44;text-align:center;letter-spacing:1px;}
+#sentence-slots{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;min-height:52px;align-items:center;padding:12px 20px;background:#ffffff08;border-radius:10px;border:1px dashed #ffdd0033;max-width:560px;width:100%;}
+.word-slot{padding:8px 14px;background:#1a1000;border:2px solid #ffdd0055;border-radius:6px;font-size:clamp(13px,1.8vw,16px);color:#ffdd00;font-weight:600;cursor:pointer;transition:all 0.15s;letter-spacing:1px;}
+.word-slot:hover{border-color:#ffdd00;background:#2a1800;}
+.word-slot.placeholder{border-style:dashed;color:#ffffff22;background:transparent;cursor:default;font-style:italic;font-size:13px;}
+#word-bank{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:560px;}
+.word-card{padding:10px 18px;background:#1a0030;border:2px solid #aa44ff55;border-radius:8px;font-size:clamp(13px,1.8vw,16px);color:#cc88ff;font-weight:600;cursor:pointer;transition:all 0.15s;letter-spacing:1px;}
+.word-card:hover{border-color:#aa44ff;background:#2a0050;transform:scale(1.05);}
+.word-card.used{opacity:0.25;pointer-events:none;}
+.word-card.wrong-shake{animation:wshake 0.35s;}
+#enigma-feedback{font-size:15px;min-height:22px;text-align:center;letter-spacing:1px;font-weight:600;}
+#enigma-hint{font-size:12px;color:#ffdd0044;letter-spacing:1px;font-style:italic;text-align:center;}
+
+/* VICTORY */
+#victory-screen{position:absolute;top:0;left:0;width:100%;height:100%;background:#08001a;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;pointer-events:all;}
+#victory-screen.active{display:flex;}
+.victory-date{font-size:12px;letter-spacing:4px;color:#ffdd00;text-transform:uppercase;}
+.victory-title{font-family:'Cinzel',serif;font-size:clamp(22px,4vw,40px);color:#fff;text-align:center;}
+.victory-text{font-size:clamp(13px,1.8vw,16px);color:#ccc;text-align:center;max-width:460px;line-height:1.9;padding:0 24px;font-style:italic;}
+
+#gameover-screen{position:absolute;top:0;left:0;width:100%;height:100%;background:#000c;display:none;flex-direction:column;align-items:center;justify-content:center;gap:20px;pointer-events:all;}
+#gameover-screen.active{display:flex;}
+
+@keyframes wshake{0%,100%{transform:translateX(0);}20%{transform:translateX(-8px);}60%{transform:translateX(8px);}80%{transform:translateX(-4px);}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+.fade-up{animation:fadeUp 0.7s ease forwards;}
+@keyframes popIn{from{opacity:0;transform:scale(0.7);}to{opacity:1;transform:scale(1);}}
+.pop-in{animation:popIn 0.4s cubic-bezier(.17,.67,.35,1.3) forwards;}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+  <div id="hud">
+    <div style="display:flex;flex-direction:column;gap:3px;">
+      <span class="hud-label">Vida</span>
+      <div id="health-bar-wrap"><div id="health-bar" style="width:100%"></div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:3px;">
+      <span class="hud-label">Pontos</span>
+      <span class="hud-val" id="score-val">0</span>
+    </div>
+  </div>
+  <div id="wave-info">
+    <div class="hud-label">Onda</div>
+    <div id="wave-num">1</div>
+  </div>
+  <div id="combo-display">
+    <div class="hud-label">Combo</div>
+    <div id="combo-val">x1</div>
+  </div>
+  <div id="controls-hint">WASD — Mover &nbsp;|&nbsp; J / ESPAÇO — Soco &nbsp;|&nbsp; K — Chute &nbsp;|&nbsp; L — Especial</div>
+  <div id="message-box"></div>
+
+  <div id="enigma-overlay">
+    <div class="enigma-title" id="enigma-title">A Confissão</div>
+    <div class="enigma-story" id="enigma-story"></div>
+    <div class="enigma-instruction">Monte o que ela disse — arraste as palavras na ordem certa</div>
+    <div id="sentence-slots"></div>
+    <div id="word-bank"></div>
+    <div id="enigma-hint">✦ Dica: foram 5 palavras simples, mas que mudaram tudo...</div>
+    <div id="enigma-feedback"></div>
+    <button style="font-family:Rajdhani,sans-serif;font-size:13px;letter-spacing:2px;padding:8px 22px;border:1px solid #ffdd0033;background:transparent;color:#ffdd0066;cursor:pointer;border-radius:4px;" onclick="resetPuzzle()">↺ Recomeçar</button>
+  </div>
+
+  <div id="victory-screen">
+    <div class="victory-date fade-up">Fevereiro de 2024</div>
+    <div class="victory-title fade-up">O Primeiro Beijo</div>
+    <canvas id="anim-canvas" width="340" height="210" style="border:1.5px solid #ffdd0033;border-radius:10px;"></canvas>
+    <div class="victory-text fade-up" id="victory-msg"></div>
+    <button class="btn fade-up" id="next-phase-btn">Próxima Fase →</button>
+  </div>
+
+  <div id="gameover-screen">
+    <div class="screen-title" style="font-size:36px;color:#ff3366">Você Caiu...</div>
+    <div class="screen-sub">A multidão foi forte demais desta vez.<br>Mas ele não desiste fácil.</div>
+    <button class="btn btn-pink" id="retry-btn">Tentar Novamente</button>
+  </div>
+
+  <div id="screen"><div id="screen-content"></div></div>
+</div>
+
+<script>
+// ── AUDIO ──────────────────────────────────────────────────────────────────
+var AC = new (window.AudioContext || window.webkitAudioContext)();
+document.addEventListener('click', function(){ if(AC.state==='suspended') AC.resume(); });
+document.addEventListener('keydown', function(){ if(AC.state==='suspended') AC.resume(); });
+
+function playSound(type) {
+  try {
+    var g = AC.createGain(); g.connect(AC.destination);
+    var o = AC.createOscillator(); o.connect(g);
+    var now = AC.currentTime;
+    if(type==='punch'){
+      o.type='square'; o.frequency.setValueAtTime(200,now); o.frequency.exponentialRampToValueAtTime(60,now+0.08);
+      g.gain.setValueAtTime(0.22,now); g.gain.exponentialRampToValueAtTime(0.001,now+0.1);
+      o.start(); o.stop(now+0.1);
+    } else if(type==='kick'){
+      o.type='sawtooth'; o.frequency.setValueAtTime(300,now); o.frequency.exponentialRampToValueAtTime(50,now+0.12);
+      g.gain.setValueAtTime(0.25,now); g.gain.exponentialRampToValueAtTime(0.001,now+0.14);
+      o.start(); o.stop(now+0.14);
+    } else if(type==='special'){
+      [200,300,500,700].forEach(function(f,i){
+        var oo=AC.createOscillator(), gg=AC.createGain();
+        oo.connect(gg); gg.connect(AC.destination);
+        oo.type='sine'; oo.frequency.value=f;
+        var t=now+i*0.04;
+        gg.gain.setValueAtTime(0.18,t); gg.gain.exponentialRampToValueAtTime(0.001,t+0.18);
+        oo.start(t); oo.stop(t+0.2);
+      });
+    } else if(type==='hit'){
+      o.type='sawtooth'; o.frequency.setValueAtTime(160,now); o.frequency.exponentialRampToValueAtTime(60,now+0.08);
+      g.gain.setValueAtTime(0.15,now); g.gain.exponentialRampToValueAtTime(0.001,now+0.1);
+      o.start(); o.stop(now+0.1);
+    } else if(type==='die'){
+      o.type='square'; o.frequency.setValueAtTime(300,now); o.frequency.exponentialRampToValueAtTime(35,now+0.5);
+      g.gain.setValueAtTime(0.2,now); g.gain.exponentialRampToValueAtTime(0.001,now+0.55);
+      o.start(); o.stop(now+0.55);
+    } else if(type==='combo'){
+      var freq = 400 + combo*80;
+      o.type='sine'; o.frequency.setValueAtTime(freq,now); o.frequency.exponentialRampToValueAtTime(freq*1.5,now+0.1);
+      g.gain.setValueAtTime(0.14,now); g.gain.exponentialRampToValueAtTime(0.001,now+0.15);
+      o.start(); o.stop(now+0.15);
+    } else if(type==='enigma_ok'){
+      [523,659,784,1047].forEach(function(f,i){
+        var oo=AC.createOscillator(), gg=AC.createGain();
+        oo.connect(gg); gg.connect(AC.destination);
+        oo.type='sine'; oo.frequency.value=f;
+        var t=now+i*0.13;
+        gg.gain.setValueAtTime(0.16,t); gg.gain.exponentialRampToValueAtTime(0.001,t+0.22);
+        oo.start(t); oo.stop(t+0.22);
+      });
+    } else if(type==='enigma_fail'){
+      o.type='square'; o.frequency.setValueAtTime(200,now); o.frequency.exponentialRampToValueAtTime(80,now+0.3);
+      g.gain.setValueAtTime(0.18,now); g.gain.exponentialRampToValueAtTime(0.001,now+0.32);
+      o.start(); o.stop(now+0.32);
+    } else if(type==='victory'){
+      [523,659,784,988,1047].forEach(function(f,i){
+        var oo=AC.createOscillator(), gg=AC.createGain();
+        oo.connect(gg); gg.connect(AC.destination);
+        oo.type='sine'; oo.frequency.value=f;
+        var t=now+i*0.14;
+        gg.gain.setValueAtTime(0.2,t); gg.gain.exponentialRampToValueAtTime(0.001,t+0.3);
+        oo.start(t); oo.stop(t+0.3);
+      });
+    } else if(type==='word_place'){
+      o.type='sine'; o.frequency.setValueAtTime(600,now); o.frequency.exponentialRampToValueAtTime(800,now+0.07);
+      g.gain.setValueAtTime(0.12,now); g.gain.exponentialRampToValueAtTime(0.001,now+0.1);
+      o.start(); o.stop(now+0.1);
+    }
+  } catch(err){}
+}
+
+// ── CANVAS ──────────────────────────────────────────────────────────────────
+var canvas = document.getElementById('c');
+var ctx = canvas.getContext('2d');
+var W, H;
+function resize(){ W=canvas.width=window.innerWidth; H=canvas.height=window.innerHeight; }
+resize();
+window.addEventListener('resize', resize);
+
+// ── STATE ──────────────────────────────────────────────────────────────────
+var gameState = 'intro';
+var score = 0;
+var combo = 0;
+var comboTimer = 0;
+var waveNum = 1;
+var MAX_WAVES = 3;
+var waveCleared = false;
+var spawnTimer = 0;
+var toSpawn = [];
+
+// ── INPUT ──────────────────────────────────────────────────────────────────
+var keys = {};
+window.addEventListener('keydown', function(e){ keys[e.code]=true; if(e.code==='Space') e.preventDefault(); });
+window.addEventListener('keyup', function(e){ keys[e.code]=false; });
+
+// ── PLAYER ──────────────────────────────────────────────────────────────────
+var player = {
+  x:0, y:0, r:20,
+  speed:2.8,
+  hp:120, maxHp:120,
+  punchCd:0, punchRate:22,
+  kickCd:0,  kickRate:38,
+  specCd:0,  specRate:120,
+  iframes:0,
+  facing:1,
+  state:'idle', stateTimer:0,
+  vy:0, onGround:true,
+  groundY:0,
+};
+
+// ── GAME OBJECTS ──────────────────────────────────────────────────────────────
+var enemies = [];
+var particles = [];
+var hitSparks = [];
+var floatingTexts = [];
+
+// ── CARNIVAL BG ──────────────────────────────────────────────────────────────
+var confetti = [];
+for(var ci=0;ci<100;ci++){
+  confetti.push({
+    x:Math.random()*2000, y:Math.random()*-300,
+    vx:(Math.random()-.5)*1.4, vy:Math.random()*1.6+0.5,
+    r:Math.random()*5+3, angle:Math.random()*Math.PI*2,
+    spin:(Math.random()-.5)*0.14,
+    color:['#ff3366','#ffdd00','#00ccff','#ff6600','#aa44ff','#00dd66','#ff99cc'][Math.floor(Math.random()*7)],
+  });
+}
+var streamers = [];
+for(var si=0;si<20;si++){
+  streamers.push({
+    x:Math.random()*2000, y:Math.random()*600,
+    len:Math.random()*90+40,
+    color:['#ff3366','#ffdd00','#00ccff','#ff6600','#aa44ff'][Math.floor(Math.random()*5)],
+    wobble:Math.random()*Math.PI*2, wspeed:Math.random()*.03+.02,
+  });
+}
+var lights = [];
+for(var li=0;li<7;li++){
+  lights.push({ phase:Math.random()*Math.PI*2, color:['#ff3366','#ffdd00','#00ccff','#aa44ff','#ff6600'][li%5] });
+}
+
+// ── ENEMY TYPES ──────────────────────────────────────────────────────────────
+var ETYPES = [
+  {name:'mascara', color:'#ff3366', r:19, hp:6,  speed:1.4, dmg:10, score:15, w:36, h:44},
+  {name:'confete', color:'#ffdd00', r:22, hp:5,  speed:1.8, dmg:8,  score:12, w:42, h:42},
+  {name:'sombra',  color:'#9933ff', r:18, hp:8,  speed:1.2, dmg:14, score:20, w:34, h:50},
+  {name:'gigante', color:'#00ccff', r:28, hp:14, speed:0.8, dmg:18, score:30, w:54, h:60},
+  {name:'boss',    color:'#ff0066', r:44, hp:60, speed:0.6, dmg:20, score:300, w:80, h:88},
+];
+
+function getGroundY(){ return H * 0.72; }
+
+function startWave(n){
+  waveNum=n;
+  document.getElementById('wave-num').textContent=n;
+  enemies=[]; particles=[]; hitSparks=[]; floatingTexts=[];
+  waveCleared=false; spawnTimer=60;
+  combo=0; updateComboDisplay();
+  if(n===MAX_WAVES){
+    toSpawn=[ETYPES[4], ETYPES[2], ETYPES[0]];
+  } else {
+    var c=6+n*3; toSpawn=[];
+    for(var i=0;i<c;i++){
+      var r=Math.random();
+      toSpawn.push(r<.15?ETYPES[3]:r<.4?ETYPES[2]:r<.7?ETYPES[1]:ETYPES[0]);
+    }
+  }
+  if(n>1) showMessage(n===MAX_WAVES?'👑 O REI DO CARNAVAL CHEGOU!':'🎊 ONDA '+n+' — MAIS CRIATURAS!', 2000);
+}
+
+function spawnEnemy(t){
+  var fromRight = Math.random()<0.5;
+  var x = fromRight ? W+60 : -60;
+  var groundY = getGroundY();
+  var spd = Math.abs(t.speed); // always positive, direction handled in AI
+  enemies.push({
+    x:x, y:groundY,
+    w:t.w, h:t.h, r:t.r,
+    hp:t.hp, maxHp:t.hp,
+    speed:spd,
+    color:t.color, dmg:t.dmg, scoreVal:t.score,
+    name:t.name, facing:fromRight?-1:1,
+    state:'walk', stateTimer:0,
+    attackCd:0, wobble:Math.random()*Math.PI*2,
+    flashTimer:0,
+  });
+}
+
+// ── ATTACKS ──────────────────────────────────────────────────────────────────
+function doPunch(){
+  if(player.punchCd>0) return;
+  player.punchCd=player.punchRate;
+  player.state='punch'; player.stateTimer=14;
+  playSound('punch');
+  var range=85, hit=false;
+  for(var i=enemies.length-1;i>=0;i--){
+    var e=enemies[i];
+    var dx=e.x-player.x;
+    if(Math.abs(dx)<range && dx*player.facing>0 && Math.abs(e.y-player.y)<55){
+      hitEnemy(e,3); hit=true;
+    }
+  }
+  if(hit){ combo++; updateComboDisplay(); playSound('combo'); }
+  else { combo=0; updateComboDisplay(); }
+  comboTimer=120;
+  addHitSpark(player.x+player.facing*60, player.y-10, '#ffcc00');
+}
+
+function doKick(){
+  if(player.kickCd>0) return;
+  player.kickCd=player.kickRate;
+  player.state='kick'; player.stateTimer=18;
+  playSound('kick');
+  var range=110, hit=false;
+  for(var i=enemies.length-1;i>=0;i--){
+    var e=enemies[i];
+    var dx=e.x-player.x;
+    if(Math.abs(dx)<range && dx*player.facing>0 && Math.abs(e.y-player.y)<65){
+      hitEnemy(e,5); hit=true;
+    }
+  }
+  if(hit){ combo+=2; updateComboDisplay(); playSound('combo'); }
+  comboTimer=120;
+  addHitSpark(player.x+player.facing*80, player.y+10, '#ff9900');
+}
+
+function doSpecial(){
+  if(player.specCd>0) return;
+  player.specCd=player.specRate;
+  player.state='special'; player.stateTimer=28;
+  playSound('special');
+  for(var i=enemies.length-1;i>=0;i--){
+    var e=enemies[i];
+    if(Math.abs(e.x-player.x)<160 && Math.abs(e.y-player.y)<80){
+      hitEnemy(e,8);
+      // Knockback
+      e.x += (e.x-player.x>0?1:-1)*80;
+    }
+  }
+  combo+=3; updateComboDisplay(); comboTimer=120;
+  // Special burst effect
+  for(var i=0;i<20;i++){
+    var a=Math.random()*Math.PI*2;
+    particles.push({x:player.x,y:player.y,vx:Math.cos(a)*6,vy:Math.sin(a)*6,r:Math.random()*6+3,life:30,maxLife:30,color:['#ffdd00','#ff3366','#aa44ff'][Math.floor(Math.random()*3)]});
+  }
+}
+
+function hitEnemy(e, dmg){
+  var totalDmg = dmg + Math.floor(combo*0.5);
+  e.hp-=totalDmg; e.flashTimer=7;
+  playSound('hit');
+  addHitSpark(e.x, e.y-e.h/2, e.color);
+  addFloatingText(e.x, e.y-e.h, '-'+totalDmg, '#ffdd00');
+  spawnParticles(e.x, e.y-e.h/2, e.color, 4);
+  if(e.hp<=0){
+    score+=e.scoreVal*(1+Math.floor(combo/3));
+    document.getElementById('score-val').textContent=score;
+    playSound('die');
+    spawnParticles(e.x, e.y-e.h/2, e.color, 14);
+    addFloatingText(e.x, e.y-e.h-20, '+'+e.scoreVal, '#00ff88');
+    var idx=enemies.indexOf(e);
+    if(idx!==-1) enemies.splice(idx,1);
+  }
+}
+
+function addHitSpark(x,y,color){
+  for(var i=0;i<6;i++){
+    var a=Math.random()*Math.PI*2, s=Math.random()*5+2;
+    hitSparks.push({x:x,y:y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:12,maxLife:12,color:color});
+  }
+}
+
+function spawnParticles(x,y,color,n){
+  for(var i=0;i<n;i++){
+    var a=Math.random()*Math.PI*2, s=Math.random()*4+1;
+    particles.push({x:x,y:y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-2,r:Math.random()*4+2,life:25,maxLife:25,color:color});
+  }
+}
+
+function addFloatingText(x,y,text,color){
+  floatingTexts.push({x:x,y:y,text:text,color:color,life:40,maxLife:40});
+}
+
+function updateComboDisplay(){
+  var el=document.getElementById('combo-val');
+  el.textContent='x'+combo;
+  el.style.color=combo>=5?'#ffdd00':combo>=3?'#ff9900':'#ff3366';
+}
+
+// ── MAIN LOOP ──────────────────────────────────────────────────────────────
+var lastTime=0;
+function loop(ts){
+  var dt=Math.min((ts-lastTime)/16.67,3); lastTime=ts;
+  ctx.clearRect(0,0,W,H);
+  if(gameState==='playing') updateGame(dt);
+  drawBG(dt);
+  if(gameState==='playing') drawEntities();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+function updateGame(dt){
+  var groundY = getGroundY();
+  player.groundY = groundY;
+
+  // Movement
+  var dx=0;
+  if(keys['KeyA']||keys['ArrowLeft'])  dx=-1;
+  if(keys['KeyD']||keys['ArrowRight']) dx=1;
+  if(dx!==0){ player.facing=dx; player.x+=dx*player.speed*dt; }
+  // Vertical (small lane movement)
+  if(keys['KeyW']||keys['ArrowUp'])   player.y-=player.speed*.6*dt;
+  if(keys['KeyS']||keys['ArrowDown']) player.y+=player.speed*.6*dt;
+
+  player.x=Math.max(player.r, Math.min(W-player.r, player.x));
+  player.y=Math.max(groundY-80, Math.min(groundY+40, player.y));
+
+  // Cooldowns
+  if(player.punchCd>0) player.punchCd-=dt;
+  if(player.kickCd>0)  player.kickCd-=dt;
+  if(player.specCd>0)  player.specCd-=dt;
+  if(player.iframes>0) player.iframes-=dt;
+  if(player.stateTimer>0){ player.stateTimer-=dt; if(player.stateTimer<=0) player.state='idle'; }
+  if(comboTimer>0){ comboTimer-=dt; if(comboTimer<=0){ combo=0; updateComboDisplay(); } }
+
+  // Actions
+  if(keys['KeyJ']||keys['Space']) doPunch();
+  if(keys['KeyK']) doKick();
+  if(keys['KeyL']) doSpecial();
+
+  // Spawn
+  spawnTimer-=dt;
+  if(spawnTimer<=0 && toSpawn.length>0){ spawnEnemy(toSpawn.shift()); spawnTimer=30; }
+
+  // Enemy AI - use index loop so splice works correctly
+  for(var ei=enemies.length-1; ei>=0; ei--){
+    var e=enemies[ei];
+    e.wobble+=.04*dt;
+    if(e.flashTimer>0) e.flashTimer-=dt;
+    e.stateTimer-=dt;
+    var edx=player.x-e.x;
+    var edy=player.y-e.y;
+    if(Math.abs(edx)>e.r+player.r){
+      e.x+=Math.sign(edx)*e.speed*dt;
+      e.facing=Math.sign(edx);
+    }
+    if(Math.abs(edy)>20) e.y+=Math.sign(edy)*e.speed*.5*dt;
+    if(Math.abs(edx)<e.r+player.r+10 && Math.abs(edy)<60){
+      if(e.attackCd<=0){
+        if(player.iframes<=0){
+          player.hp-=e.dmg*.06*dt;
+          player.iframes=4;
+          updateHealthBar();
+          if(player.hp<=0) triggerGameover();
+        }
+      }
+    }
+    if(e.attackCd>0) e.attackCd-=dt;
+  }
+
+  // Particles
+  particles=particles.filter(function(p){
+    p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy+=.2*dt; p.vx*=.92; p.life-=dt; return p.life>0;
+  });
+  hitSparks=hitSparks.filter(function(s){
+    s.x+=s.vx*dt; s.y+=s.vy*dt; s.life-=dt; return s.life>0;
+  });
+  floatingTexts=floatingTexts.filter(function(f){
+    f.y-=.8*dt; f.life-=dt; return f.life>0;
+  });
+
+  // Confetti
+  confetti.forEach(function(c){
+    c.x+=c.vx*dt; c.y+=c.vy*dt; c.angle+=c.spin*dt;
+    if(c.y>H+20){ c.y=-20; c.x=Math.random()*W; }
+  });
+
+  // Wave cleared?
+  if(!waveCleared && toSpawn.length===0 && enemies.length===0){
+    waveCleared=true;
+    setTimeout(function(){
+      if(waveNum<MAX_WAVES) startWave(waveNum+1);
+      else triggerEnigma();
+    }, 1000);
+  }
+}
+
+function updateHealthBar(){ document.getElementById('health-bar').style.width=Math.max(0,player.hp/player.maxHp*100)+'%'; }
+
+// ── DRAW ──────────────────────────────────────────────────────────────────
+function drawBG(dt){
+  // Night sky
+  ctx.fillStyle='#08001a'; ctx.fillRect(0,0,W,H);
+
+  // Stars
+  for(var i=0;i<50;i++){
+    var sx=(i*137.5)%W, sy=(i*97.3)%220;
+    var sa=.3+Math.sin(Date.now()*.002+i)*.2;
+    ctx.beginPath(); ctx.arc(sx,sy,Math.random()<.02?1.5:.7,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,'+sa+')'; ctx.fill();
+  }
+
+  // Carnival lights (sweeping)
+  lights.forEach(function(l,i){
+    l.phase+=.012;
+    var cx=(i+.5)*(W/7);
+    ctx.save(); ctx.translate(cx,0); ctx.rotate(Math.sin(l.phase)*.5);
+    ctx.beginPath(); ctx.moveTo(0,0);
+    var r=H*.8, sp=.22;
+    ctx.arc(0,0,r,-sp,sp); ctx.closePath();
+    ctx.fillStyle=l.color+'14'; ctx.fill();
+    ctx.restore();
+  });
+
+  // Buildings silhouette (background crowd buildings)
+  ctx.fillStyle='#0d0030';
+  for(var i=0;i<12;i++){
+    var bx=i*(W/10)-20, bh=80+Math.sin(i*1.7)*40, bw=W/10+10;
+    ctx.fillRect(bx, H*.55-bh, bw, bh);
+    // windows
+    ctx.fillStyle='#ffdd0022';
+    for(var wy=0;wy<3;wy++) for(var wx=0;wx<3;wx++){
+      if(Math.sin(i*3.1+wx*1.7+wy*2.3)>.2) ctx.fillRect(bx+8+wx*14,H*.55-bh+10+wy*20,8,10);
+    }
+    ctx.fillStyle='#0d0030';
+  }
+
+  // Crowd silhouette
+  ctx.fillStyle='#0a001f';
+  for(var i=0;i<35;i++){
+    var cx2=i*(W/32), cy=H*.68;
+    var h2=30+Math.sin(i*2.3+Date.now()*.001)*5;
+    ctx.beginPath(); ctx.arc(cx2,cy-h2,11,Math.PI,0); ctx.fill();
+    ctx.fillRect(cx2-9,cy-h2,18,h2+8);
+  }
+
+  // Ground / street
+  var gy=getGroundY();
+  ctx.fillStyle='#120030'; ctx.fillRect(0,gy,W,H-gy);
+  ctx.fillStyle='#1a0040'; ctx.fillRect(0,gy,W,6);
+  // Street markings
+  ctx.strokeStyle='rgba(255,221,0,0.08)'; ctx.lineWidth=2; ctx.setLineDash([30,20]);
+  ctx.beginPath(); ctx.moveTo(0,gy+H*.06); ctx.lineTo(W,gy+H*.06); ctx.stroke(); ctx.setLineDash([]);
+
+  // Streamers
+  streamers.forEach(function(s){
+    s.wobble+=s.wspeed;
+    ctx.save(); ctx.translate(s.x%W,s.y);
+    ctx.strokeStyle=s.color+'88'; ctx.lineWidth=2.5; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(0,0);
+    for(var i=0;i<6;i++) ctx.lineTo((i+1)*(s.len/6), Math.sin(s.wobble+i)*(s.len*.18));
+    ctx.stroke(); ctx.restore();
+  });
+
+  // Confetti
+  confetti.forEach(function(c){
+    ctx.save(); ctx.translate(c.x,c.y); ctx.rotate(c.angle);
+    ctx.fillStyle=c.color; ctx.fillRect(-c.r/2,-c.r/3,c.r,c.r*.55);
+    ctx.restore();
+  });
+}
+
+function drawEntities(){
+  var groundY=getGroundY();
+
+  // Particles
+  particles.forEach(function(p){
+    var a=p.life/p.maxLife;
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.r*a,0,Math.PI*2);
+    ctx.fillStyle=p.color+Math.floor(a*200).toString(16).padStart(2,'0'); ctx.fill();
+  });
+
+  // Hit sparks
+  hitSparks.forEach(function(s){
+    var a=s.life/s.maxLife;
+    ctx.beginPath(); ctx.arc(s.x,s.y,3*a,0,Math.PI*2);
+    ctx.fillStyle=s.color; ctx.fill();
+  });
+
+  // Sort by Y for depth
+  var allChars = enemies.slice();
+  allChars.push({isPlayer:true, y:player.y});
+  allChars.sort(function(a,b){ return a.y-b.y; });
+
+  allChars.forEach(function(ch){
+    if(ch.isPlayer){
+      drawPlayer();
+    } else {
+      drawEnemy(ch);
+    }
+  });
+
+  // Floating texts
+  floatingTexts.forEach(function(f){
+    var a=f.life/f.maxLife;
+    ctx.globalAlpha=a;
+    ctx.fillStyle=f.color;
+    ctx.font='bold '+Math.round(14+combo*0.5)+'px Rajdhani';
+    ctx.textAlign='center';
+    ctx.fillText(f.text, f.x, f.y);
+    ctx.globalAlpha=1;
+  });
+
+  // Cooldown indicators
+  ctx.fillStyle='rgba(0,0,0,0.5)';
+  ctx.fillRect(16, H-50, 240, 30);
+  var attacks=[
+    {label:'J:Soco', cd:player.punchCd, max:player.punchRate, color:'#ffcc00'},
+    {label:'K:Chute', cd:player.kickCd, max:player.kickRate, color:'#ff6600'},
+    {label:'L:Especial', cd:player.specCd, max:player.specRate, color:'#aa44ff'},
+  ];
+  attacks.forEach(function(atk,i){
+    var ready=atk.cd<=0;
+    ctx.fillStyle=ready?atk.color:'#444';
+    ctx.font='bold 11px Rajdhani';
+    ctx.textAlign='left';
+    ctx.fillText(atk.label+(ready?' ✓':''), 22+i*82, H-30);
+  });
+}
+
+function drawPlayer(){
+  var x=player.x, y=player.y, f=player.facing;
+  var flash=player.iframes>0;
+  ctx.save(); ctx.translate(x,y);
+  if(flash && Math.floor(Date.now()/80)%2===0){ ctx.globalAlpha=.3; }
+
+  // Shadow
+  ctx.beginPath(); ctx.ellipse(0,4,18,6,0,0,Math.PI*2);
+  ctx.fillStyle='rgba(0,0,0,0.35)'; ctx.fill();
+
+  // Body
+  ctx.fillStyle='#ffcc00';
+  ctx.fillRect(f>0?-14:-14, -44, 28, 34); // torso
+
+  // Head
+  ctx.beginPath(); ctx.arc(0,-52,16,0,Math.PI*2);
+  ctx.fillStyle='#ffcc00'; ctx.fill();
+
+  // Eye
+  ctx.beginPath(); ctx.arc(f>0?6:-6,-52,4,0,Math.PI*2);
+  ctx.fillStyle='#000'; ctx.fill();
+  ctx.beginPath(); ctx.arc(f>0?7.5:-7.5,-53,1.5,0,Math.PI*2);
+  ctx.fillStyle='#fff'; ctx.fill();
+
+  // Legs
+  ctx.fillStyle='#cc9900';
+  if(player.state==='idle' || player.state==='walk'){
+    ctx.fillRect(f>0?-12:-12,-12,10,24);
+    ctx.fillRect(f>0?2:2,-12,10,24);
+  } else {
+    ctx.fillRect(f>0?-14:-4,-12,10,22);
+    ctx.fillRect(f>0?4:-14,-12,10,28);
+  }
+
+  // Punch arm
+  if(player.state==='punch'){
+    ctx.fillStyle='#ffcc00';
+    ctx.fillRect(f>0?14:-54,-38,40,14);
+    // Fist
+    ctx.beginPath(); ctx.arc(f>0?58:-58,-31,10,0,Math.PI*2);
+    ctx.fillStyle='#ffaa00'; ctx.fill();
+  } else if(player.state==='kick'){
+    ctx.fillStyle='#ffaa00';
+    ctx.save(); ctx.translate(f>0?10:-10,-5);
+    ctx.rotate(f>0?-.7:.7);
+    ctx.fillRect(-6,-6,12,34);
+    ctx.restore();
+  } else if(player.state==='special'){
+    // Spinning energy
+    ctx.save();
+    ctx.rotate(Date.now()*.02);
+    ctx.strokeStyle='#ffdd00'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.arc(0,-20,35,0,Math.PI*2); ctx.stroke();
+    ctx.strokeStyle='#ff3366'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(0,-20,25,0,Math.PI*1.5); ctx.stroke();
+    ctx.restore();
+  } else {
+    // Normal arms
+    ctx.fillStyle='#ffcc00';
+    ctx.fillRect(f>0?-22:-22,-42,8,22);
+    ctx.fillRect(f>0?14:14,-42,8,22);
+  }
+
+  ctx.restore();
+}
+
+function drawEnemy(e){
+  ctx.save(); ctx.translate(e.x, e.y);
+  if(e.flashTimer>0) ctx.globalAlpha=.35;
+  var c=e.flashTimer>0?'#fff':e.color;
+  var f=e.facing;
+
+  // Shadow
+  ctx.beginPath(); ctx.ellipse(0,4,e.r*.9,e.r*.3,0,0,Math.PI*2);
+  ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.fill();
+
+  if(e.name==='mascara'){
+    // Carnival mask creature
+    ctx.fillStyle=c; ctx.fillRect(-e.w/2,-e.h,e.w,e.h*.7);
+    ctx.beginPath(); ctx.arc(0,-e.h*.75,e.w*.45,0,Math.PI*2); ctx.fill();
+    // Mask
+    ctx.fillStyle='#fff3';
+    ctx.beginPath(); ctx.ellipse(0,-e.h*.75,e.w*.38,e.w*.28,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#000';
+    ctx.beginPath(); ctx.ellipse(f>0?-8:8,-e.h*.8,6,8,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(f>0?8:-8,-e.h*.8,6,8,0,0,Math.PI*2); ctx.fill();
+    // Feathers
+    ctx.fillStyle=c;
+    for(var i=0;i<5;i++){
+      var fa=(i-2)*.25-Math.PI/2;
+      ctx.fillRect(Math.cos(fa)*e.w*.5-3,-e.h*.95+Math.sin(fa)*e.w*.5,6,16);
+    }
+  } else if(e.name==='confete'){
+    // Giant confetti ball
+    ctx.beginPath(); ctx.arc(0,-e.h*.5,e.r,0,Math.PI*2); ctx.fillStyle=c; ctx.fill();
+    // Confetti on body
+    var ccolors=['#ff3366','#00ccff','#ffdd00','#aa44ff','#00dd66'];
+    for(var i=0;i<8;i++){
+      var ca=i*(Math.PI*2/8)+e.wobble;
+      ctx.save(); ctx.translate(Math.cos(ca)*e.r*.6, -e.h*.5+Math.sin(ca)*e.r*.6);
+      ctx.rotate(ca); ctx.fillStyle=ccolors[i%5];
+      ctx.fillRect(-4,-2,8,4); ctx.restore();
+    }
+    ctx.fillStyle='#000';
+    ctx.beginPath(); ctx.arc(f>0?-e.r*.3:e.r*.3,-e.h*.55,5,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(f>0?e.r*.3:-e.r*.3,-e.h*.55,5,0,Math.PI*2); ctx.fill();
+  } else if(e.name==='sombra'){
+    // Shadow creature
+    ctx.fillStyle=c+'99';
+    ctx.beginPath(); ctx.ellipse(0,-e.h*.4,e.r*1.2,e.h*.55,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=c;
+    ctx.beginPath(); ctx.arc(0,-e.h*.7,e.r*.7,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#fff';
+    ctx.beginPath(); ctx.ellipse(f>0?-8:8,-e.h*.72,5,7,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(f>0?8:-8,-e.h*.72,5,7,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#000';
+    ctx.beginPath(); ctx.ellipse(f>0?-8:8,-e.h*.72,2.5,4,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(f>0?8:-8,-e.h*.72,2.5,4,0,0,Math.PI*2); ctx.fill();
+  } else if(e.name==='gigante'){
+    ctx.fillStyle=c; ctx.fillRect(-e.w/2,-e.h,e.w,e.h*.8);
+    ctx.beginPath(); ctx.arc(0,-e.h*.88,e.w*.42,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#000';
+    ctx.beginPath(); ctx.ellipse(f>0?-10:10,-e.h*.92,7,8,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(f>0?10:-10,-e.h*.92,7,8,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#fff4';
+    ctx.fillRect(-e.w*.3,-e.h*.7,e.w*.6,8);
+  } else if(e.name==='boss'){
+    // Carnival King boss
+    // Cape
+    ctx.fillStyle='#aa0033';
+    ctx.beginPath(); ctx.moveTo(-e.w*.5,-e.h*.7); ctx.lineTo(-e.w*.7,0); ctx.lineTo(e.w*.7,0); ctx.lineTo(e.w*.5,-e.h*.7); ctx.closePath(); ctx.fill();
+    // Body
+    ctx.fillStyle=c; ctx.fillRect(-e.w/2,-e.h*.75,e.w,e.h*.6);
+    // Head
+    ctx.beginPath(); ctx.arc(0,-e.h*.82,e.w*.35,0,Math.PI*2); ctx.fill();
+    // Crown
+    ctx.fillStyle='#ffdd00';
+    ctx.beginPath(); ctx.moveTo(-e.w*.35,-e.h*.98); ctx.lineTo(-e.w*.35,-e.h*1.18); ctx.lineTo(-e.w*.18,-e.h*1.06); ctx.lineTo(0,-e.h*1.22); ctx.lineTo(e.w*.18,-e.h*1.06); ctx.lineTo(e.w*.35,-e.h*1.18); ctx.lineTo(e.w*.35,-e.h*.98); ctx.closePath(); ctx.fill();
+    // Eyes
+    ctx.fillStyle='#000'; ctx.beginPath(); ctx.ellipse(f>0?-12:12,-e.h*.86,8,9,0,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.ellipse(f>0?12:-12,-e.h*.86,8,9,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#ff0'; ctx.beginPath(); ctx.ellipse(f>0?-12:12,-e.h*.86,3,4,0,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.ellipse(f>0?12:-12,-e.h*.86,3,4,0,0,Math.PI*2); ctx.fill();
+  }
+
+  // HP bar
+  ctx.globalAlpha=1;
+  var bw=e.w+16;
+  ctx.fillStyle='#220'; ctx.fillRect(-bw/2,-e.h-16,bw,6);
+  ctx.fillStyle=e.hp/e.maxHp>.5?'#ff3366':'#f00';
+  ctx.fillRect(-bw/2,-e.h-16,bw*(e.hp/e.maxHp),6);
+  ctx.restore();
+}
+
+// ── SCREENS ──────────────────────────────────────────────────────────────────
+var screenEl=document.getElementById('screen');
+function showScreen(html){ screenEl.classList.remove('hidden'); document.getElementById('screen-content').innerHTML=html; }
+function hideScreen(){ screenEl.classList.add('hidden'); }
+function showMessage(text,dur){
+  var m=document.getElementById('message-box'); m.innerHTML=text; m.style.display='block';
+  clearTimeout(showMessage._t);
+  showMessage._t=setTimeout(function(){ m.style.display='none'; }, dur);
+}
+
+// ── CUTSCENES ──────────────────────────────────────────────────────────────────
+function startIntro(){
+  gameState='intro';
+  showScreen(
+    '<div style="text-align:center;padding:0 24px;max-width:540px;">'
+    +'<div style="font-size:11px;letter-spacing:5px;color:#aa44ff;margin-bottom:20px;text-transform:uppercase">Fase 2 — Fevereiro de 2024</div>'
+    +'<div class="screen-title" style="font-size:clamp(24px,4.5vw,46px)">🎭 Carnaval</div>'
+    +'<div class="screen-sub">A memória pulsa. O portal ainda está aberto.<br>Para continuar voltando, Matheus precisa lembrar<br>do que aconteceu naquela noite de Fevereiro.</div>'
+    +'<button class="btn" onclick="startCut1()">Continuar ›</button>'
+    +'</div>'
+  );
+}
+
+function startCut1(){
+  gameState='cut1';
+  showScreen(
+    '<div style="text-align:center;padding:0 24px;max-width:520px;">'
+    +'<div style="font-size:11px;letter-spacing:4px;color:#aa44ff;margin-bottom:18px;text-transform:uppercase">A Noite Anterior</div>'
+    +'<div class="screen-title" style="color:#cc88ff;font-size:clamp(20px,3.5vw,34px);margin-bottom:16px">A Confissão</div>'
+    +'<div class="screen-sub" style="margin-bottom:10px">'
+    +'Ela havia insistido para ele ir à festa.<br>'
+    +'E foi naquela noite que ela disse o que sentia.<br><br>'
+    +'Ele chegou mais perto. Os dois se olharam.<br>'
+    +'E o beijo que veio deixou uma marca roxa — só deles. 💜'
+    +'</div>'
+    +'<button class="btn" style="border-color:#cc88ff;color:#cc88ff;" onmouseover="this.style.background=\'#cc88ff\';this.style.color=\'#000\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'#cc88ff\'" onclick="startCut2()">Continuar ›</button>'
+    +'</div>'
+  );
+}
+
+function startCut2(){
+  gameState='cut2';
+  showScreen(
+    '<div style="text-align:center;padding:0 24px;max-width:520px;">'
+    +'<div style="font-size:11px;letter-spacing:4px;color:#ffdd00;margin-bottom:18px;text-transform:uppercase">No Dia Seguinte — Carnaval</div>'
+    +'<div class="screen-title" style="font-size:clamp(20px,3.5vw,34px);margin-bottom:16px">A Rua Fechada</div>'
+    +'<div class="screen-sub" style="margin-bottom:10px">'
+    +'A rua estava fechada. Confetes por todo lado.<br>'
+    +'Matheus foi com um amigo, encontraram o grupo —<br>'
+    +'mas a multidão foi separando todo mundo.<br><br>'
+    +'E quando ele achou ela, olhou nos olhos e disse:<br>'
+    +'<em style="color:#ffcc44">"Quero um beijo seu."</em>'
+    +'</div>'
+    +'<div style="font-size:13px;color:#ff336688;margin-bottom:24px">Mas para chegar até ela...<br>ele precisa abrir caminho pela multidão.</div>'
+    +'<button class="btn" onclick="startPlaying()">🥊 Lutar ›</button>'
+    +'</div>'
+  );
+}
+
+function startPlaying(){
+  hideScreen(); gameState='playing';
+  var groundY=getGroundY();
+  player.x=100; player.y=groundY;
+  player.hp=player.maxHp; player.state='idle';
+  score=0; combo=0;
+  document.getElementById('score-val').textContent='0';
+  document.getElementById('hud').style.display='flex';
+  document.getElementById('wave-info').style.display='block';
+  document.getElementById('combo-display').style.display='block';
+  document.getElementById('controls-hint').style.display='block';
+  updateHealthBar(); updateComboDisplay();
+  startWave(1);
+  showMessage('🎊 ONDA 1 — ABRA CAMINHO!', 2400);
+}
+
+// ── WORD PUZZLE ENIGMA ──────────────────────────────────────────────────────
+var CORRECT_SENTENCE = ['EU', 'QUERO', 'FICAR', 'COM', 'VOCÊ'];
+var EXTRA_WORDS      = ['NÃO', 'NUNCA', 'TALVEZ', 'IR', 'LONGE'];
+var placedWords = [];
+var allWords = [];
+
+function triggerEnigma(){
+  gameState='enigma';
+  document.getElementById('hud').style.display='none';
+  document.getElementById('wave-info').style.display='none';
+  document.getElementById('combo-display').style.display='none';
+  document.getElementById('controls-hint').style.display='none';
+  showMessage('O caminho está bloqueado...<br>Ele precisa lembrar das palavras dela!', 2400);
+  setTimeout(function(){ openEnigma(); }, 2400);
+}
+
+function openEnigma(){
+  placedWords=[];
+  allWords = CORRECT_SENTENCE.concat(EXTRA_WORDS).sort(function(){ return Math.random()-.5; });
+  renderPuzzle();
+  document.getElementById('enigma-story').textContent=
+    'Entre confetes e música, no meio da multidão do Carnaval, ele finalmente chegou até ela. '
+    +'E ao olhar nos olhos dela, lembrou das palavras que ela havia dito na noite anterior...';
+  document.getElementById('enigma-overlay').classList.add('active');
+}
+
+function renderPuzzle(){
+  // Slots
+  var slots='';
+  for(var i=0;i<CORRECT_SENTENCE.length;i++){
+    if(i<placedWords.length){
+      slots+='<div class="word-slot pop-in" onclick="removeWord('+i+')">'+placedWords[i]+'</div>';
+    } else if(i===placedWords.length){
+      slots+='<div class="word-slot placeholder">_ _ _</div>';
+    } else {
+      slots+='<div class="word-slot placeholder">_ _ _</div>';
+    }
+  }
+  document.getElementById('sentence-slots').innerHTML=slots;
+
+  // Word bank
+  var bank='';
+  allWords.forEach(function(w,i){
+    var used=placedWords.indexOf(w)!==-1 && CORRECT_SENTENCE.indexOf(w)!==-1 && placedWords.filter(function(p){return p===w;}).length >= CORRECT_SENTENCE.filter(function(c){return c===w;}).length;
+    bank+='<div class="word-card'+(used?' used':'')+'" onclick="placeWord(\''+w+'\')">'+w+'</div>';
+  });
+  document.getElementById('word-bank').innerHTML=bank;
+  document.getElementById('enigma-feedback').textContent='';
+}
+
+function placeWord(w){
+  if(placedWords.length>=CORRECT_SENTENCE.length) return;
+  playSound('word_place');
+  placedWords.push(w);
+  renderPuzzle();
+  if(placedWords.length===CORRECT_SENTENCE.length){
+    setTimeout(function(){ checkSentence(); }, 300);
+  }
+}
+
+function removeWord(idx){
+  placedWords.splice(idx,1);
+  renderPuzzle();
+}
+
+function resetPuzzle(){
+  placedWords=[];
+  renderPuzzle();
+}
+
+function checkSentence(){
+  var correct=true;
+  for(var i=0;i<CORRECT_SENTENCE.length;i++){
+    if(placedWords[i]!==CORRECT_SENTENCE[i]){ correct=false; break; }
+  }
+  var fb=document.getElementById('enigma-feedback');
+  if(correct){
+    playSound('enigma_ok');
+    fb.style.color='#0f0';
+    fb.textContent='✓ "EU QUERO FICAR COM VOCÊ" — as palavras que mudaram tudo.';
+    setTimeout(function(){
+      document.getElementById('enigma-overlay').classList.remove('active');
+      triggerVictory();
+    }, 1800);
+  } else {
+    playSound('enigma_fail');
+    fb.style.color='#f55';
+    fb.textContent='✗ Essa não é a ordem certa... tente de novo.';
+    document.querySelectorAll('.word-slot:not(.placeholder)').forEach(function(el){
+      el.style.borderColor='#f00';
+    });
+    setTimeout(function(){
+      placedWords=[];
+      renderPuzzle();
+    }, 900);
+  }
+}
+
+// ── VICTORY ──────────────────────────────────────────────────────────────────
+function triggerVictory(){
+  gameState='victory'; playSound('victory');
+  document.getElementById('victory-screen').classList.add('active');
+  document.getElementById('victory-msg').innerHTML=
+    'Na noite anterior ela disse as cinco palavras.<br>'
+    +'No Carnaval ele pediu o beijo.<br><br>'
+    +'<em style="color:#cc88ff">E a marca roxa no lábio ficou como prova<br>de que aquilo foi muito, muito real. 💜</em>';
+  runVictoryAnim();
+}
+
+function runVictoryAnim(){
+  var ac=document.getElementById('anim-canvas');
+  var a=ac.getContext('2d');
+  var t=0;
+  var ccolors=['#ff3366','#ffdd00','#00ccff','#aa44ff','#ff6600'];
+  var cpieces=[];
+  for(var i=0;i<40;i++) cpieces.push({x:Math.random()*340,y:Math.random()*210,vx:(Math.random()-.5)*2,vy:Math.random()*-2-1,color:ccolors[i%5],angle:Math.random()*Math.PI*2,spin:(Math.random()-.5)*.1});
+  var hearts=[];
+  for(var i=0;i<10;i++) hearts.push({x:Math.random()*340,y:220,vy:-(Math.random()*1.2+.5),vx:(Math.random()-.5)*.5,alpha:.8,sz:Math.random()*10+5,color:Math.random()<.5?'#aa44ff':'#ff4466'});
+
+  function hrt(ctx,x,y,sz,al,col){
+    ctx.save(); ctx.globalAlpha=al; ctx.fillStyle=col;
+    ctx.translate(x,y); ctx.scale(sz/10,sz/10);
+    ctx.beginPath(); ctx.moveTo(0,-3);
+    ctx.bezierCurveTo(5,-8,10,-4,0,5); ctx.bezierCurveTo(-10,-4,-5,-8,0,-3);
+    ctx.fill(); ctx.restore();
+  }
+
+  function frame(){
+    if(gameState!=='victory') return;
+    t++;
+    a.clearRect(0,0,340,210);
+    a.fillStyle='#08001a'; a.fillRect(0,0,340,210);
+
+    // Lights
+    for(var i=0;i<5;i++){
+      var cx=34+i*68, hue=t*2+i*40;
+      a.beginPath(); a.moveTo(cx,210);
+      a.arc(cx,210,160,-0.38+Math.sin(t*.025+i)*.28,-0.02+Math.sin(t*.025+i)*.28);
+      a.fillStyle='hsla('+hue+',80%,60%,0.09)'; a.fill();
+    }
+
+    // Confetti
+    cpieces.forEach(function(c){
+      c.x+=c.vx; c.y+=c.vy; c.vy+=.04; c.angle+=c.spin;
+      if(c.y>220){ c.y=-10; c.x=Math.random()*340; c.vy=-(Math.random()*2+1); }
+      a.save(); a.translate(c.x,c.y); a.rotate(c.angle);
+      a.fillStyle=c.color; a.fillRect(-4,-2,8,4); a.restore();
+    });
+
+    // Two figures close together
+    var prog=Math.min(1,t/80);
+    var lx=120+prog*20, rx=220-prog*20;
+    // Matheus
+    a.fillStyle='#ffcc00'; a.beginPath(); a.arc(lx,120,14,0,Math.PI*2); a.fill(); a.fillRect(lx-10,133,20,30);
+    // Magali
+    a.fillStyle='#ff88cc'; a.beginPath(); a.arc(rx,120,14,0,Math.PI*2); a.fill();
+    a.beginPath(); a.moveTo(rx-13,133); a.lineTo(rx+13,133); a.lineTo(rx+16,163); a.lineTo(rx-16,163); a.closePath(); a.fill();
+
+    // Kiss moment
+    if(prog>.85){
+      var kp=Math.min(1,(prog-.85)/.15);
+      hrt(a,(lx+rx)/2,108,14*kp,kp,'#aa44ff');
+      // Purple lip mark hint
+      a.globalAlpha=kp*.7;
+      a.fillStyle='#cc44ff';
+      a.beginPath(); a.ellipse(lx+14,124,5,3,0,0,Math.PI*2); a.fill();
+      a.globalAlpha=1;
+    }
+
+    hearts.forEach(function(h){ h.y+=h.vy; h.x+=h.vx; h.alpha-=.003; if(h.y<-20||h.alpha<=0){h.y=230;h.x=Math.random()*340;h.alpha=.7;} hrt(a,h.x,h.y,h.sz,h.alpha,h.color); });
+
+    if(t>60){
+      a.globalAlpha=Math.min(1,(t-60)/30);
+      a.fillStyle='#cc88ff'; a.font='bold 12px Rajdhani'; a.textAlign='center';
+      a.fillText('Fevereiro 2024 — O primeiro (e segundo) beijo',170,195);
+      a.globalAlpha=1;
+    }
+    requestAnimationFrame(frame);
+  }
+  frame();
+}
+
+document.getElementById('next-phase-btn').addEventListener('click', function(){
+  document.getElementById('victory-screen').classList.remove('active');
+  showScreen(
+    '<div style="text-align:center;padding:0 24px;max-width:480px;">'
+    +'<div style="font-size:11px;letter-spacing:4px;color:#ffdd00;margin-bottom:14px;text-transform:uppercase">Fase 2 Concluída ✓</div>'
+    +'<div class="screen-title" style="font-size:clamp(18px,3vw,30px);margin-bottom:14px;color:#ffcc44">Memória Desbloqueada</div>'
+    +'<div class="screen-sub">'
+    +'O Carnaval estava salvo na memória.<br>'
+    +'O portal pulsou — mais forte desta vez.<br><br>'
+    +'<span style="color:#aa44ff;font-style:italic">A Fase 3 — A Conversa está chegando. 💜</span>'
+    +'</div>'
+    +'<button class="btn" onclick="startIntro()" style="margin-top:8px">Jogar Novamente ↺</button>'
+    +'</div>'
+  );
+});
+
+document.getElementById('retry-btn').addEventListener('click', function(){
+  document.getElementById('gameover-screen').classList.remove('active');
+  document.getElementById('hud').style.display='none';
+  document.getElementById('wave-info').style.display='none';
+  document.getElementById('combo-display').style.display='none';
+  document.getElementById('controls-hint').style.display='none';
+  startIntro();
+});
+
+function triggerGameover(){
+  gameState='gameover'; player.hp=0; updateHealthBar();
+  document.getElementById('gameover-screen').classList.add('active');
+}
+
+startIntro();
+</script>
+</body>
+</html>

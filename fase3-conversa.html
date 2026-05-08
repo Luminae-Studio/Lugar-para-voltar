@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Lugar para Voltar — Fase 3</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Rajdhani:wght@400;600;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#000;overflow:hidden;font-family:'Rajdhani',sans-serif;color:#fff;user-select:none;}
+canvas{display:block;}
+#ui{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;}
+#hud{position:absolute;top:14px;left:16px;display:none;gap:28px;align-items:center;}
+.hl{font-size:11px;letter-spacing:2px;color:#66ccff;text-transform:uppercase;}
+.hv{font-size:18px;font-weight:700;color:#fff;}
+#screen{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:all;background:#060d1a;}
+#screen.hidden{display:none;}
+.st{font-family:'Cinzel',serif;font-size:clamp(26px,5vw,50px);color:#66ccff;text-align:center;margin-bottom:8px;letter-spacing:4px;}
+.ss{font-size:clamp(13px,2vw,17px);color:#aac;text-align:center;max-width:500px;line-height:1.8;margin-bottom:28px;padding:0 24px;}
+.btn{font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;letter-spacing:3px;text-transform:uppercase;padding:14px 40px;border:2px solid #66ccff;background:transparent;color:#66ccff;cursor:pointer;transition:all .2s;border-radius:4px;pointer-events:all;}
+.btn:hover{background:#66ccff;color:#000;}
+#ch{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);font-size:12px;color:#334;letter-spacing:2px;text-transform:uppercase;display:none;pointer-events:none;white-space:nowrap;}
+#mb{position:absolute;top:30%;left:50%;transform:translate(-50%,-50%);background:#000d;border:1px solid #66ccff55;border-radius:8px;padding:14px 22px;font-size:clamp(13px,1.7vw,16px);color:#fff;text-align:center;max-width:400px;line-height:1.7;pointer-events:none;display:none;font-family:'Cinzel',serif;}
+#df{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(255,40,40,.45);display:none;pointer-events:none;}
+#door-ov{position:absolute;top:0;left:0;width:100%;height:100%;background:#000f;display:none;flex-direction:column;align-items:center;justify-content:center;pointer-events:all;gap:22px;padding:24px;}
+#door-ov.active{display:flex;}
+.dp .rv{color:#ffdd88;}
+.dp .cur{display:inline-block;width:2px;height:1em;background:#66ccff;margin-left:2px;animation:bl .7s infinite;}
+@keyframes bl{0%,100%{opacity:1;}50%{opacity:0;}}
+#vs{position:absolute;top:0;left:0;width:100%;height:100%;background:#060d1a;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;pointer-events:all;}
+#vs.active{display:flex;}
+#go{position:absolute;top:0;left:0;width:100%;height:100%;background:#000c;display:none;flex-direction:column;align-items:center;justify-content:center;gap:20px;pointer-events:all;}
+#go.active{display:flex;}
+@keyframes fu{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+.fu{animation:fu .7s ease forwards;}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+  <div id="hud">
+    <div style="display:flex;flex-direction:column;gap:3px;"><span class="hl">Vidas</span><span class="hv" id="lv">❤️❤️❤️</span></div>
+    <div style="display:flex;flex-direction:column;gap:3px;"><span class="hl">Chaves</span><span class="hv" id="kv">0/4</span></div>
+    <div style="display:flex;flex-direction:column;gap:3px;"><span class="hl">Mortes</span><span class="hv" id="dv" style="color:#ff5555">0</span></div>
+  </div>
+  <div id="ch">A/D ou ← → — Mover &nbsp;|&nbsp; W / ↑ / Espaço — Pular &nbsp;|&nbsp; Pulo duplo!</div>
+  <div id="mb"></div>
+  <div id="df"></div>
+  <div id="door-ov">
+    <div style="font-family:'Cinzel',serif;font-size:clamp(19px,3vw,28px);color:#66ccff;letter-spacing:3px;text-align:center;">🚪 A Porta se Abre...</div>
+    <div style="font-size:12px;color:#66ccff55;letter-spacing:2px;font-style:italic;">As pizzas guardam um segredo...</div>
+    <div class="dp" style="font-size:clamp(14px,2vw,19px);color:#fff;text-align:center;max-width:580px;line-height:2;font-style:italic;min-height:54px;" id="dph"></div>
+    <div style="font-size:13px;color:#99a;text-align:center;max-width:380px;line-height:1.7;" id="dsb"></div>
+    <button class="btn" id="dcb" style="display:none;">Continuar ›</button>
+  </div>
+  <div id="vs">
+    <div class="fu" style="font-size:12px;letter-spacing:4px;color:#66ccff;text-transform:uppercase;">Julho de 2024</div>
+    <div class="fu" style="font-family:'Cinzel',serif;font-size:clamp(22px,4vw,40px);color:#fff;text-align:center;">A Conversa Real</div>
+    <canvas id="ac" width="340" height="210" style="border:1.5px solid #66ccff33;border-radius:10px;"></canvas>
+    <div class="fu" style="font-size:clamp(13px,1.8vw,16px);color:#ccd;text-align:center;max-width:460px;line-height:1.9;padding:0 24px;font-style:italic;" id="vm"></div>
+    <button class="btn fu" id="nb">Próxima Fase →</button>
+  </div>
+  <div id="go">
+    <div class="st" style="font-size:clamp(22px,4vw,34px);color:#66aaff;">Sem Vidas...</div>
+    <div class="ss">A cidade foi cruel demais desta vez.<br>Mas Matheus não desiste.</div>
+    <div style="font-size:13px;color:#ff555566;margin-bottom:4px;">Mortes: <span id="dv2">0</span></div>
+    <button class="btn" id="rb">Tentar Novamente</button>
+  </div>
+  <div id="screen"><div id="sc"></div></div>
+</div>
+<script>
+// ── AUDIO ───────────────────────────────────────────────────────────────────
+var AC=new(window.AudioContext||window.webkitAudioContext)();
+document.addEventListener('click',function(){if(AC.state==='suspended')AC.resume();});
+document.addEventListener('keydown',function(){if(AC.state==='suspended')AC.resume();});
+function snd(t){
+  try{
+    var g=AC.createGain(),o=AC.createOscillator(),n=AC.currentTime;
+    o.connect(g);g.connect(AC.destination);
+    if(t==='jump'){o.type='sine';o.frequency.setValueAtTime(320,n);o.frequency.exponentialRampToValueAtTime(640,n+.13);g.gain.setValueAtTime(.13,n);g.gain.exponentialRampToValueAtTime(.001,n+.15);o.start();o.stop(n+.15);}
+    else if(t==='jump2'){o.type='sine';o.frequency.setValueAtTime(500,n);o.frequency.exponentialRampToValueAtTime(900,n+.1);g.gain.setValueAtTime(.1,n);g.gain.exponentialRampToValueAtTime(.001,n+.12);o.start();o.stop(n+.12);}
+    else if(t==='land'){o.type='square';o.frequency.setValueAtTime(100,n);o.frequency.exponentialRampToValueAtTime(55,n+.07);g.gain.setValueAtTime(.08,n);g.gain.exponentialRampToValueAtTime(.001,n+.09);o.start();o.stop(n+.09);}
+    else if(t==='die'){o.type='sawtooth';o.frequency.setValueAtTime(440,n);o.frequency.exponentialRampToValueAtTime(55,n+.5);g.gain.setValueAtTime(.2,n);g.gain.exponentialRampToValueAtTime(.001,n+.55);o.start();o.stop(n+.55);}
+    else if(t==='spike'){o.type='square';o.frequency.setValueAtTime(280,n);o.frequency.exponentialRampToValueAtTime(70,n+.09);g.gain.setValueAtTime(.18,n);g.gain.exponentialRampToValueAtTime(.001,n+.11);o.start();o.stop(n+.11);}
+    else if(t==='key'){[880,1100,1320].forEach(function(f,i){var oo=AC.createOscillator(),gg=AC.createGain();oo.connect(gg);gg.connect(AC.destination);oo.type='sine';oo.frequency.value=f;var tt=n+i*.08;gg.gain.setValueAtTime(.14,tt);gg.gain.exponentialRampToValueAtTime(.001,tt+.18);oo.start(tt);oo.stop(tt+.18);});}
+    else if(t==='door'){[523,659,784,1047,1319].forEach(function(f,i){var oo=AC.createOscillator(),gg=AC.createGain();oo.connect(gg);gg.connect(AC.destination);oo.type='sine';oo.frequency.value=f;var tt=n+i*.12;gg.gain.setValueAtTime(.16,tt);gg.gain.exponentialRampToValueAtTime(.001,tt+.25);oo.start(tt);oo.stop(tt+.25);});}
+    else if(t==='victory'){[523,659,784,988,1047,1319].forEach(function(f,i){var oo=AC.createOscillator(),gg=AC.createGain();oo.connect(gg);gg.connect(AC.destination);oo.type='sine';oo.frequency.value=f;var tt=n+i*.13;gg.gain.setValueAtTime(.16,tt);gg.gain.exponentialRampToValueAtTime(.001,tt+.3);oo.start(tt);oo.stop(tt+.3);});}
+  }catch(e){}
+}
+
+// ── CANVAS ──────────────────────────────────────────────────────────────────
+var cv=document.getElementById('c'),ctx=cv.getContext('2d'),W,H;
+function resize(){W=cv.width=window.innerWidth;H=cv.height=window.innerHeight;}
+resize();
+window.addEventListener('resize',function(){resize();if(gs==='playing')startLevel();});
+
+// ── STATE ───────────────────────────────────────────────────────────────────
+var gs='intro',keysGot=0,TKEYS=4,lives=3,deaths=0,camX=0,gt=0;
+
+// ── INPUT ───────────────────────────────────────────────────────────────────
+var ks={},jp={};
+window.addEventListener('keydown',function(e){if(!ks[e.code])jp[e.code]=true;ks[e.code]=true;['Space','ArrowUp','ArrowDown'].indexOf(e.code)>=0&&e.preventDefault();});
+window.addEventListener('keyup',function(e){ks[e.code]=false;});
+
+// ── PLAYER ──────────────────────────────────────────────────────────────────
+var P={x:120,y:400,w:26,h:40,vx:0,vy:0,spd:4.2,jp:-15.5,og:false,jl:2,dead:false,rt:0,f:1,af:0,at:0,state:'idle'};
+
+// ── LEVEL DATA ──────────────────────────────────────────────────────────────
+// Platform object:
+//   type: 'safe' | 'trap' | 'fall' | 'moving'
+//   trap platforms: have spikes that rise from top when player lands
+//   fall platforms: drop when player steps on them
+// Spike object: attached to a platform, rises from surface upward
+var PLATS=[];   // platform definitions
+var SPIKES=[];  // spike groups — each tied to a platform
+var KEYS=[];    // key items
+var DOOR=null;
+var TRIGGERS=[]; // {trigX, fired, fn}
+var PARTS=[];    // particles
+
+// Level width
+var LW=5200;
+
+// Background (city, pre-built, doesn't change)
+var BLDS=[];
+(function(){
+  for(var i=0;i<28;i++){
+    var bw=90+Math.floor(Math.random()*80);
+    var bh=60+Math.floor(Math.random()*160);
+    var ws=[];
+    for(var j=0;j<12;j++) ws.push({ox:6+Math.floor(Math.random()*(bw-16)),oy:6+Math.floor(Math.random()*(bh-16)),on:Math.random()>.5});
+    BLDS.push({x:i*200-60,w:bw,h:bh,c:i%3===0?'#0a1528':i%3===1?'#0d1a33':'#111f3a',ws:ws});
+  }
+})();
+var STARS=[];
+for(var i=0;i<120;i++) STARS.push({x:Math.random()*LW,y:20+Math.random()*200,r:.4+Math.random()*1.2,tw:Math.random()*6.28});
+
+// ── LEVEL BUILDER ─────────────────────────────────────────────────────────
+// ground Y — fixed, always the same relative to H
+function GY(){return Math.round(H*0.82);}
+
+function startLevel(){
+  PLATS=[];SPIKES=[];KEYS=[];TRIGGERS=[];PARTS=[];DOOR=null;
+  camX=0;gt=0;keysGot=0;
+  var gy=GY();
+
+  // Reset player
+  P.x=100;P.y=gy-200;P.vx=0;P.vy=0;P.og=false;P.jl=2;P.dead=false;P.rt=0;
+
+  // ── PLATFORM HELPERS ────────────────────────────────────────────────────
+  // Safe platform — always safe to stand on
+  function safe(x,y,w){ PLATS.push({x:x,y:y,w:w,h:16,type:'safe',color:'#3a7a3a',solid:true}); }
+  // Trap platform — spikes shoot up from surface when player lands
+  function trap(x,y,w,delay){
+    var p={x:x,y:y,w:w,h:16,type:'trap',color:'#5a2a2a',solid:true};
+    PLATS.push(p);
+    // Spike group sitting on top of this platform
+    SPIKES.push({
+      px:x,py:y,pw:w,   // mirrors platform position
+      platRef:p,         // reference to platform
+      curH:0,maxH:40,
+      state:'idle',      // idle -> rising -> hold -> retracting
+      riseSpd:6,holdFrames:55,holdT:0,retractSpd:2.5,
+      delay:delay||0,delayT:0,  // frames to wait after landing before rising
+    });
+  }
+  // Fall platform — drops when stepped on
+  function fall(x,y,w){
+    PLATS.push({x:x,y:y,w:w,h:16,type:'fall',color:'#4a3a1a',solid:true,falling:false,vy:0,origY:y});
+  }
+  // Moving platform
+  function mov(x,y,w,vx,vy,x1,x2,y1,y2){
+    PLATS.push({x:x,y:y,w:w,h:16,type:'moving',color:'#1a3a6a',solid:true,vx:vx||0,vy:vy||0,x1:x1||x,x2:x2||x,y1:y1||y,y2:y2||y});
+  }
+  // Key item
+  function key(x,y){ KEYS.push({x:x,y:y,w:22,h:22,got:false,spin:Math.random()*6.28,bob:Math.random()*6.28}); }
+  // Trigger zone
+  function trig(tx,fn){ TRIGGERS.push({trigX:tx,fired:false,fn:fn}); }
+
+  // ════════════════════════════════════════════════════════════════════════
+  // GROUND — solid base with intentional gaps
+  // Players die if they fall into gaps
+  // ════════════════════════════════════════════════════════════════════════
+  // Segment 1: 0–500 (start area)
+  PLATS.push({x:0,y:gy,w:500,h:60,type:'safe',color:'#1a0a28',solid:true});
+  // GAP: 500–700
+  // Segment 2: 700–1300
+  PLATS.push({x:700,y:gy,w:600,h:60,type:'safe',color:'#1a0a28',solid:true});
+  // GAP: 1300–1600
+  // Segment 3: 1600–2400
+  PLATS.push({x:1600,y:gy,w:800,h:60,type:'safe',color:'#1a0a28',solid:true});
+  // GAP: 2400–2800
+  // Segment 4: 2800–3600
+  PLATS.push({x:2800,y:gy,w:800,h:60,type:'safe',color:'#1a0a28',solid:true});
+  // GAP: 3600–4000
+  // Segment 5: 4000–5200 (end area)
+  PLATS.push({x:4000,y:gy,w:1200,h:60,type:'safe',color:'#1a0a28',solid:true});
+
+  // ════════════════════════════════════════════════════════════════════════
+  // ROOM 1 — Tutorial trap (0–700)
+  // First platform is safe. Second looks safe but has spikes.
+  // Player learns: red platforms = danger
+  // ════════════════════════════════════════════════════════════════════════
+  safe(80,  gy-90,  140);   // safe entry platform
+  trap(290, gy-90,  140);   // TRAP — spikes rise after 0 frames
+  safe(500, gy-150, 120);   // safe escape above the gap
+
+  // KEY 1 — above the trap platform, player must approach carefully
+  key(340, gy-160);
+
+  // ════════════════════════════════════════════════════════════════════════
+  // ROOM 2 — Falling floor chain (700–1600)
+  // All platforms fall — must move fast
+  // ════════════════════════════════════════════════════════════════════════
+  safe(700,  gy-90,  120);   // safe landing
+  fall(880,  gy-90,  110);   // falls!
+  fall(1050, gy-90,  110);   // falls!
+  fall(1220, gy-140, 100);   // falls! (higher)
+  safe(1390, gy-90,  140);   // safe landing
+
+  // Trap above fall chain — if they try to go high they hit spikes
+  trap(900,  gy-200, 100, 0);
+  trap(1060, gy-200, 100, 0);
+
+  // KEY 2 — on the last fall platform before it drops (tight timing!)
+  key(1240, gy-190);
+
+  // ════════════════════════════════════════════════════════════════════════
+  // ROOM 3 — Moving platforms + traps (1600–2800)
+  // Moving platforms are safe. Static ones in between are traps.
+  // ════════════════════════════════════════════════════════════════════════
+  safe(1600, gy-90,  120);
+  trap(1790, gy-90,  110, 8);   // delayed spike — gives false sense of safety
+  mov(1980,  gy-90,  100, 2.5,0, 1920,2160,0,0);
+  trap(2200, gy-90,  110, 0);
+  mov(2380,  gy-130, 90,  0,2,   0,0, GY()-200,GY()-70);
+  safe(2620, gy-90,  120);
+
+  // KEY 3 — riding the vertical moving platform to reach it
+  key(2395, gy-240);
+
+  trig(1780, function(){showMsg('Nem tudo que parece parado está seguro... 😈',1800);});
+
+  // ════════════════════════════════════════════════════════════════════════
+  // ROOM 4 — The betrayal (2800–3600)
+  // ALL platforms look safe (green) — but they're all traps with delay
+  // Player learns the hard way that color means nothing here
+  // ════════════════════════════════════════════════════════════════════════
+  // All these look green/safe but are traps with a 15-frame delay
+  var r4=[2840,2990,3140,3290,3430];
+  for(var i=0;i<r4.length;i++){
+    var p2={x:r4[i],y:gy-90,w:110,h:16,type:'trap',color:'#3a7a3a',solid:true}; // green color = looks safe!
+    PLATS.push(p2);
+    SPIKES.push({px:r4[i],py:gy-90,pw:110,platRef:p2,curH:0,maxH:40,state:'idle',riseSpd:7,holdFrames:45,holdT:0,retractSpd:3,delay:12,delayT:0});
+  }
+  safe(3530, gy-90, 120); // actual safe landing
+
+  trig(2830, function(){showMsg('Confie nos seus instintos... ou não. 😏',1600);});
+
+  // KEY 4 — above the last fake-safe platform, need perfect timing
+  key(3480, gy-165);
+
+  // ════════════════════════════════════════════════════════════════════════
+  // ROOM 5 — Gauntlet (3600–4200)
+  // Gap crossing with moving platforms — some are traps
+  // ════════════════════════════════════════════════════════════════════════
+  safe(3600, gy-90,  100);
+  mov(3770,  gy-90,  90, 2.8,0, 3710,3960,0,0);   // safe moving
+  trap(3990, gy-90,  100, 0);                        // trap
+  mov(4100,  gy-150, 80, 0,2.5, 0,0, GY()-220,GY()-80); // safe moving vertical
+
+  trig(3770, function(){showMsg('Quase lá... 🔑',1400);});
+
+  // ════════════════════════════════════════════════════════════════════════
+  // FINAL AREA — Door (4100–5200)
+  // ════════════════════════════════════════════════════════════════════════
+  safe(4200, gy-90,  800);
+  DOOR={x:4900,y:gy-90-90,w:54,h:90,open:false};
+
+  updateHUD();
+}
+
+// ── GAME LOOP ────────────────────────────────────────────────────────────────
+var lt=0;
+function loop(ts){
+  var dt=Math.min((ts-lt)/16.67,3);lt=ts;
+  ctx.clearRect(0,0,W,H);
+  if(gs==='playing')update(dt);
+  if(gs==='playing'||gs==='door')draw();
+  jp={};
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// ── UPDATE ───────────────────────────────────────────────────────────────────
+function update(dt){
+  gt+=dt;
+  if(P.dead){P.rt-=dt;if(P.rt<=0)respawn();return;}
+
+  // Input
+  var mx=0;
+  if(ks['KeyA']||ks['ArrowLeft'])mx=-1;
+  if(ks['KeyD']||ks['ArrowRight'])mx=1;
+  if(mx!==0)P.f=mx;
+  P.vx=mx*P.spd*2.2;
+  P.state=P.og?(mx!==0?'run':'idle'):'air';
+
+  // Jump
+  if((jp['Space']||jp['KeyW']||jp['ArrowUp'])&&P.jl>0){
+    snd(P.jl===2?'jump':'jump2');
+    P.vy=P.jp;P.jl--;P.og=false;
+  }
+
+  // Gravity
+  P.vy=Math.min(P.vy+0.65*dt,20);
+  P.x+=P.vx*dt;
+  P.x=Math.max(0,Math.min(LW-P.w,P.x));
+  P.y+=P.vy*dt;
+
+  var wasG=P.og; P.og=false;
+  var gy=GY();
+
+  // Move moving platforms
+  PLATS.forEach(function(p){
+    if(p.type!=='moving')return;
+    if(p.vx){p.x+=p.vx;if(p.x>p.x2||p.x<p.x1)p.vx*=-1;}
+    if(p.vy){p.y+=p.vy;if(p.y>p.y2||p.y<p.y1)p.vy*=-1;}
+  });
+
+  // Update spike mirrors for moving platforms (if we ever add moving traps)
+  SPIKES.forEach(function(s){
+    if(s.platRef&&s.platRef.type==='moving'){
+      s.px=s.platRef.x;s.py=s.platRef.y;s.pw=s.platRef.w;
+    }
+  });
+
+  // Fall platforms — drop when stepped on
+  PLATS.forEach(function(p){
+    if(p.type!=='fall')return;
+    if(p.falling){
+      p.vy+=0.5;p.y+=p.vy;
+      if(p.y>H+100){p.y=p.origY;p.vy=0;p.falling=false;p.solid=true;}
+    }
+  });
+
+  // Platform collision
+  var landedOn=null;
+  for(var i=0;i<PLATS.length;i++){
+    var p=PLATS[i];
+    if(!p.solid)continue;
+    var inX=P.x+P.w>p.x+2&&P.x<p.x+p.w-2;
+    var feet=P.y+P.h, prevFeet=feet-P.vy*dt;
+    if(inX&&P.vy>=0&&prevFeet<=p.y+8&&feet>=p.y){
+      P.y=p.y-P.h; P.vy=0; P.og=true; P.jl=2;
+      if(!wasG){snd('land');landedOn=p;}
+      // Fall platform: start falling
+      if(p.type==='fall'&&!p.falling){p.falling=true;p.vy=1;p.solid=false;}
+      break;
+    }
+  }
+
+  // Carry on moving platform
+  PLATS.forEach(function(p){
+    if(p.type!=='moving')return;
+    if(P.x+P.w>p.x&&P.x<p.x+p.w&&Math.abs(P.y+P.h-p.y)<10&&P.og){
+      P.x+=p.vx||0; if(p.vy){P.y=p.y-P.h;}
+    }
+  });
+
+  // Activate spikes on landing
+  if(landedOn){
+    SPIKES.forEach(function(s){
+      if(s.platRef===landedOn&&s.state==='idle'){
+        if(s.delay>0){s.state='delayed';s.delayT=s.delay;}
+        else{s.state='rising';snd('spike');}
+      }
+    });
+  }
+
+  // Update spikes
+  SPIKES.forEach(function(s){
+    if(s.state==='delayed'){
+      s.delayT-=dt;
+      if(s.delayT<=0){s.state='rising';snd('spike');}
+    }
+    if(s.state==='rising'){
+      s.curH+=s.riseSpd*dt;
+      if(s.curH>=s.maxH){s.curH=s.maxH;s.state='hold';s.holdT=s.holdFrames;}
+    }
+    if(s.state==='hold'){
+      s.holdT-=dt;
+      if(s.holdT<=0)s.state='retracting';
+    }
+    if(s.state==='retracting'){
+      s.curH-=s.retractSpd*dt;
+      if(s.curH<=0){s.curH=0;s.state='idle';}
+    }
+  });
+
+  // Spike kill — spikes are ON TOP of platform (y = platY - curH to platY)
+  if(!P.dead){
+    SPIKES.forEach(function(s){
+      if(s.curH<4)return;
+      // Spikes occupy from platY upward by curH
+      var sTop=s.py-s.curH;
+      var inX=P.x+P.w>s.px+3&&P.x<s.px+s.pw-3;
+      var inY=P.y+P.h>sTop&&P.y<s.py;
+      if(inX&&inY)killPlayer();
+    });
+  }
+
+  // Fall into void
+  if(P.y>H+80)killPlayer();
+
+  // Triggers
+  TRIGGERS.forEach(function(t){if(!t.fired&&P.x>t.trigX){t.fired=true;t.fn();}});
+
+  // Key collection
+  KEYS.forEach(function(k){
+    if(k.got)return;
+    k.spin+=.05*dt; k.bob+=.04*dt;
+    var cx=k.x+k.w/2,cy=k.y+k.h/2+Math.sin(k.bob)*5;
+    if(Math.abs(P.x+P.w/2-cx)<28&&Math.abs(P.y+P.h/2-cy)<28){
+      k.got=true;keysGot++;snd('key');
+      burst(cx,cy,['#ffdd00','#fff','#ffaa00'],16);
+      updateHUD();
+      if(keysGot===TKEYS&&DOOR){DOOR.open=true;showMsg('🗝️ Todas as chaves! Chegue até a porta!',2600);}
+    }
+  });
+
+  // Door entry
+  if(DOOR&&DOOR.open){
+    if(P.x+P.w>DOOR.x&&P.x<DOOR.x+DOOR.w&&P.y+P.h>DOOR.y&&P.y<DOOR.y+DOOR.h){
+      gs='door';snd('door');openDoor();
+    }
+  }
+
+  // Camera — smooth follow
+  var tx=P.x-W*.35;
+  camX+=(tx-camX)*.13*dt;
+  camX=Math.max(0,Math.min(LW-W,camX));
+
+  // Particles
+  PARTS=PARTS.filter(function(p){p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=.2*dt;p.vx*=.92;p.life-=dt;return p.life>0;});
+}
+
+// ── KILL & RESPAWN ────────────────────────────────────────────────────────────
+function killPlayer(){
+  if(P.dead)return;
+  snd('die');P.dead=true;deaths++;
+  document.getElementById('dv').textContent=deaths;
+  document.getElementById('dv2').textContent=deaths;
+  var f=document.getElementById('df');f.style.display='block';
+  setTimeout(function(){f.style.display='none';},240);
+  lives--;updateHUD();
+  burst(P.x+P.w/2,P.y+P.h/2,['#ff4444','#ffaa44'],12);
+  if(lives<=0){setTimeout(function(){gs='gameover';document.getElementById('go').classList.add('active');},400);}
+  else P.rt=52;
+}
+
+function respawn(){
+  var savedKeys=keysGot;
+  startLevel();
+  keysGot=savedKeys;
+  // Restore collected keys
+  var c=0;KEYS.forEach(function(k){if(c<savedKeys){k.got=true;c++;}});
+  if(keysGot===TKEYS&&DOOR)DOOR.open=true;
+  updateHUD();
+}
+
+function burst(x,y,cs,n){
+  for(var i=0;i<n;i++){
+    var a=Math.random()*6.28,s=Math.random()*5+2;
+    PARTS.push({x:x,y:y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-2,r:Math.random()*4+2,life:24,maxLife:24,color:cs[Math.floor(Math.random()*cs.length)]});
+  }
+}
+
+function updateHUD(){
+  var s='';for(var i=0;i<Math.max(0,lives);i++)s+='❤️';for(var i=lives;i<3;i++)s+='🖤';
+  document.getElementById('lv').textContent=s||'💀';
+  document.getElementById('kv').textContent=keysGot+'/'+TKEYS;
+}
+
+// ── DRAW ─────────────────────────────────────────────────────────────────────
+function draw(){
+  var sx=Math.floor(camX),gy=GY();
+  ctx.fillStyle='#060d1a';ctx.fillRect(0,0,W,H);
+
+  // Stars
+  STARS.forEach(function(s){
+    s.tw+=.016;
+    var bx=((s.x-sx*.08)%W+W)%W;
+    ctx.beginPath();ctx.arc(bx,s.y,s.r,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,'+(0.28+Math.sin(s.tw)*.22)+')';ctx.fill();
+  });
+
+  // Moon
+  ctx.beginPath();ctx.arc(W-140-sx*.012,55,32,0,Math.PI*2);ctx.fillStyle='#fffde0';ctx.fill();
+  ctx.beginPath();ctx.arc(W-128-sx*.012,47,26,0,Math.PI*2);ctx.fillStyle='#060d1a';ctx.fill();
+
+  // City buildings (parallax, clearly behind everything)
+  BLDS.forEach(function(b){
+    var bx=b.x-sx*.35;
+    if(bx+b.w<0||bx>W)return;
+    var by=H-b.h-55;
+    ctx.fillStyle=b.c;ctx.fillRect(bx,by,b.w,b.h);
+    b.ws.forEach(function(w){
+      if(w.on){ctx.fillStyle='rgba(255,220,120,0.35)';ctx.fillRect(bx+w.ox,by+w.oy,7,10);}
+    });
+  });
+
+  // Neon signs (low, clearly street-level decor)
+  [['🍕 PIZZA',340,'#ff4466'],['☕ CAFÉ',1600,'#aa44ff'],['🍸 BAR',2800,'#44ccff'],['🏨 HOTEL',4000,'#ffaa22']].forEach(function(n){
+    var nx=n[1]-sx;if(nx<-100||nx>W+60)return;
+    ctx.font='bold 13px Rajdhani';ctx.textAlign='left';
+    ctx.shadowColor=n[2];ctx.shadowBlur=8;ctx.fillStyle=n[2];
+    ctx.fillText(n[0],nx,H-62);ctx.shadowBlur=0;
+  });
+
+  // Ground segments (drawn first, clearly floor)
+  PLATS.forEach(function(p){
+    if(p.type!=='safe'&&p.type!=='moving'&&p.type!=='fall'&&p.type!=='trap')return;
+    var px=p.x-sx;
+    if(px+p.w<0||px>W)return;
+    if(p.type==='safe'&&p.h===60){
+      // This is the ground segment
+      ctx.fillStyle='#1a0a28';ctx.fillRect(px,p.y,p.w,p.h);
+      ctx.fillStyle='#2a1240';ctx.fillRect(px,p.y,p.w,6);
+      return;
+    }
+  });
+
+  // Aerial platforms — clearly styled by type
+  PLATS.forEach(function(p){
+    if(p.h===60)return; // skip ground, already drawn
+    var px=p.x-sx;
+    if(px+p.w<0||px>W)return;
+    if(p.type==='fall'&&p.y>H)return;
+
+    var topColor='rgba(255,255,255,0.2)';
+    ctx.fillStyle=p.color;
+    ctx.fillRect(px,p.y,p.w,p.h);
+
+    if(p.type==='safe'){
+      // Green safe platforms — bright clear top
+      ctx.fillStyle='rgba(80,220,80,0.35)';
+      ctx.fillRect(px,p.y,p.w,5);
+    } else if(p.type==='trap'){
+      // Dark red trap platforms — subtle warning on top
+      ctx.fillStyle='rgba(200,50,50,0.3)';
+      ctx.fillRect(px,p.y,p.w,5);
+    } else if(p.type==='fall'){
+      // Brown fall platforms — orange tinge
+      ctx.fillStyle=p.falling?'rgba(255,80,0,0.4)':'rgba(255,160,40,0.3)';
+      ctx.fillRect(px,p.y,p.w,5);
+    } else if(p.type==='moving'){
+      // Blue moving platforms — bright top
+      ctx.fillStyle='rgba(60,140,255,0.4)';
+      ctx.fillRect(px,p.y,p.w,5);
+    }
+  });
+
+  // Spikes — ON TOP of their platform, pointing UP
+  SPIKES.forEach(function(s){
+    if(s.curH<1)return;
+    var px=s.px-sx;
+    if(px+s.pw<0||px>W)return;
+    var sw=12,count=Math.floor(s.pw/sw);
+    // Red-orange color, darker when retracting
+    var alpha=s.state==='retracting'?0.6:1;
+    ctx.globalAlpha=alpha;
+    ctx.fillStyle='#ff3333';
+    for(var i=0;i<count;i++){
+      var tx=px+i*sw;
+      ctx.beginPath();
+      ctx.moveTo(tx,s.py);                    // bottom-left
+      ctx.lineTo(tx+sw/2,s.py-s.curH);        // tip (pointing UP)
+      ctx.lineTo(tx+sw,s.py);                  // bottom-right
+      ctx.closePath();
+      ctx.fill();
+    }
+    // Glow on platform surface
+    ctx.fillStyle='rgba(255,50,50,0.2)';
+    ctx.fillRect(px,s.py-s.curH,s.pw,s.curH);
+    ctx.globalAlpha=1;
+  });
+
+  // Keys
+  KEYS.forEach(function(k){
+    if(k.got)return;
+    var kx=k.x-sx+k.w/2,ky=k.y+k.h/2+Math.sin(k.bob)*5;
+    // Glow
+    ctx.beginPath();ctx.arc(kx,ky,16,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,221,0,0.15)';ctx.fill();
+    // Key shape
+    ctx.save();ctx.translate(kx,ky);ctx.rotate(k.spin);
+    ctx.fillStyle='#ffdd00';
+    ctx.beginPath();ctx.arc(0,0,8,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#1a1000';ctx.beginPath();ctx.arc(0,0,3.5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#ffdd00';
+    ctx.fillRect(7,-2.5,13,5);ctx.fillRect(15,-6,4,4);ctx.fillRect(18,-6,4,4);
+    ctx.restore();
+  });
+
+  // Door
+  if(DOOR){
+    var dx=DOOR.x-sx,dy=DOOR.y;
+    ctx.fillStyle='#3a2800';ctx.fillRect(dx-6,dy-6,DOOR.w+12,DOOR.h+6);
+    if(DOOR.open){
+      ctx.fillStyle='#0a0518';ctx.fillRect(dx,dy,DOOR.w,DOOR.h);
+      ctx.beginPath();ctx.arc(dx+DOOR.w/2,dy+DOOR.h/2,26,0,Math.PI*2);
+      ctx.fillStyle='rgba(100,180,255,0.2)';ctx.fill();
+      ctx.font='22px serif';ctx.textAlign='center';
+      ctx.fillText('✨',dx+DOOR.w/2,dy+DOOR.h/2+8);
+    } else {
+      ctx.fillStyle='#5a3800';ctx.fillRect(dx,dy,DOOR.w,DOOR.h);
+      ctx.fillStyle='rgba(0,0,0,0.2)';
+      ctx.fillRect(dx+6,dy+8,DOOR.w-12,DOOR.h/2-10);
+      ctx.fillRect(dx+6,dy+DOOR.h/2+4,DOOR.w-12,DOOR.h/2-14);
+      ctx.fillStyle='#ffaa00';ctx.beginPath();ctx.arc(dx+DOOR.w/2,dy+DOOR.h/2,7,0,Math.PI*2);ctx.fill();
+      ctx.font='12px serif';ctx.textAlign='center';
+      ctx.fillText(keysGot<TKEYS?'🔒 '+(TKEYS-keysGot):'🔓',dx+DOOR.w/2,dy-14);
+    }
+  }
+
+  // Particles
+  PARTS.forEach(function(p){
+    var a=p.life/p.maxLife;
+    ctx.beginPath();ctx.arc(p.x-sx,p.y,p.r*a,0,Math.PI*2);
+    ctx.fillStyle=p.color+Math.floor(a*200).toString(16).padStart(2,'0');ctx.fill();
+  });
+
+  // Player
+  if(!P.dead||(Math.floor(gt*2)%2===0))drawPlayer(sx);
+}
+
+function drawPlayer(sx){
+  var px=P.x-sx,py=P.y,f=P.f;
+  ctx.save();ctx.translate(px+P.w/2,py+P.h);
+  // Shadow
+  ctx.beginPath();ctx.ellipse(0,3,12,4,0,0,Math.PI*2);
+  ctx.fillStyle='rgba(0,0,0,0.3)';ctx.fill();
+  ctx.translate(0,-P.h);
+  // Legs animate when running
+  var lo=P.state==='run'?Math.sin(P.af*1.8)*7:0;
+  ctx.fillStyle='#3a5ecc';
+  ctx.fillRect(f>0?-10:-10,P.h-16,9,16+lo);
+  ctx.fillRect(f>0?1:1,P.h-16,9,16-lo);
+  // Body
+  ctx.fillStyle='#4a6ee0';ctx.fillRect(-11,P.h*.28,22,P.h*.54);
+  // Head
+  ctx.beginPath();ctx.arc(0,P.h*.14,11,0,Math.PI*2);ctx.fillStyle='#4a6ee0';ctx.fill();
+  // Eye — single dot
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(f>0?4:-4,P.h*.14,2.5,0,Math.PI*2);ctx.fill();
+  // Arm
+  ctx.fillStyle='#4a6ee0';ctx.fillRect(f>0?10:-19,P.state==='air'?P.h*.3:P.h*.36,9,13);
+  ctx.restore();
+  // Animate walk
+  P.at+=1;if(P.at>7){P.at=0;P.af=(P.af+1)%4;}
+}
+
+// ── SCREENS & FLOW ────────────────────────────────────────────────────────────
+var sel=document.getElementById('screen');
+function showS(h){sel.classList.remove('hidden');document.getElementById('sc').innerHTML=h;}
+function hideS(){sel.classList.add('hidden');}
+function showMsg(t,d){
+  var m=document.getElementById('mb');m.innerHTML=t;m.style.display='block';
+  clearTimeout(showMsg._t);showMsg._t=setTimeout(function(){m.style.display='none';},d);
+}
+
+function startIntro(){
+  gs='intro';
+  showS('<div style="text-align:center;padding:0 24px;max-width:540px;">'
+    +'<div style="font-size:11px;letter-spacing:5px;color:#66ccff;margin-bottom:20px;text-transform:uppercase">Fase 3 — Julho de 2024</div>'
+    +'<div class="st">A Conversa</div>'
+    +'<div class="ss">Uma noite de julho — a noite em que as palavras finalmente vieram.<br><br>Mas a cidade não deixa as memórias chegarem fácil.<br><span style="color:#ff444466;font-style:italic">Nada é o que parece.</span></div>'
+    +'<button class="btn" onclick="goC1()">Continuar ›</button></div>');
+}
+function goC1(){
+  showS('<div style="text-align:center;padding:0 24px;max-width:520px;">'
+    +'<div style="font-size:11px;letter-spacing:4px;color:#66ccff;margin-bottom:18px;text-transform:uppercase">A Noite</div>'
+    +'<div class="st" style="font-size:clamp(20px,3.5vw,34px);margin-bottom:14px">Esfirras e Silêncios</div>'
+    +'<div class="ss">Foram comer esfirra. A conversa estava estranha.<br>Depois ele a levou para casa.<br>Beberam vinho. E as palavras finalmente vieram.<br><br>'
+    +'<button class="btn" onclick="goPlay()">🔑 Começar ›</button></div>');
+}
+function goPlay(){
+  hideS();gs='playing';lives=3;deaths=0;
+  startLevel();
+  document.getElementById('hud').style.display='flex';
+  document.getElementById('ch').style.display='block';
+  updateHUD();
+  setTimeout(function(){showMsg('🔑 Encontre as 4 chaves e abra a porta!',2800);},500);
+}
+
+// ── DOOR SCENE ────────────────────────────────────────────────────────────────
+var PHRASE='as pizzas revelaram tudo aquilo que nossa mente se recusava a por em palavras';
+var pi=0,piv=null;
+function openDoor(){
+  document.getElementById('hud').style.display='none';
+  document.getElementById('ch').style.display='none';
+  var ov=document.getElementById('door-ov');
+  document.getElementById('dph').innerHTML='<span class="cur"></span>';
+  document.getElementById('dsb').textContent='';
+  document.getElementById('dcb').style.display='none';
+  ov.classList.add('active');
+  pi=0;setTimeout(revPhrase,900);
+}
+function revPhrase(){
+  clearInterval(piv);
+  piv=setInterval(function(){
+    pi++;
+    var sh=PHRASE.substring(0,pi),rs=PHRASE.substring(pi);
+    document.getElementById('dph').innerHTML='<span class="rv">"'+sh+'</span>'+(rs.length?'<span class="cur"></span>':'"');
+    if(pi>=PHRASE.length){
+      clearInterval(piv);
+      setTimeout(function(){
+        document.getElementById('dsb').textContent='— Julho de 2024. As palavras que finalmente encontraram o caminho.';
+        document.getElementById('dcb').style.display='block';
+      },900);
+    }
+  },50);
+}
+document.getElementById('dcb').addEventListener('click',function(){
+  document.getElementById('door-ov').classList.remove('active');
+  triggerVictory();
+});
+
+// ── VICTORY ───────────────────────────────────────────────────────────────────
+function triggerVictory(){
+  gs='victory';snd('victory');
+  document.getElementById('vs').classList.add('active');
+  document.getElementById('vm').innerHTML='Naquela noite de julho, entre esfirras e silêncios,<br>vinho e verdades, eles finalmente falaram.<br><br><em style="color:#aa88ff">E o que havia ficado sem nome<br>ganhou o nome mais bonito de todos. 💙</em>';
+  runVictAnim();
+}
+function runVictAnim(){
+  var ac=document.getElementById('ac'),a=ac.getContext('2d'),t=0;
+  var sts=[];for(var i=0;i<55;i++)sts.push({x:Math.random()*340,y:Math.random()*210,r:Math.random()*1.2+.4,tw:Math.random()*6.28});
+  var hts=[];for(var i=0;i<14;i++)hts.push({x:Math.random()*340,y:230,vy:-(Math.random()*1.1+.4),vx:(Math.random()-.5)*.5,al:.8,sz:Math.random()*10+5,col:Math.random()<.5?'#5588ff':'#8866ff'});
+  function hrt(c,x,y,sz,al,col){c.save();c.globalAlpha=al;c.fillStyle=col;c.translate(x,y);c.scale(sz/10,sz/10);c.beginPath();c.moveTo(0,-3);c.bezierCurveTo(5,-8,10,-4,0,5);c.bezierCurveTo(-10,-4,-5,-8,0,-3);c.fill();c.restore();}
+  function frame(){
+    if(gs!=='victory')return;t++;
+    a.clearRect(0,0,340,210);a.fillStyle='#060d1a';a.fillRect(0,0,340,210);
+    sts.forEach(function(s){s.tw+=.02;a.beginPath();a.arc(s.x,s.y,s.r,0,Math.PI*2);a.fillStyle='rgba(255,255,255,'+(0.25+Math.sin(s.tw)*.2)+')';a.fill();});
+    a.fillStyle='rgba(255,200,100,0.1)';a.fillRect(110,38,120,132);a.strokeStyle='rgba(255,200,100,0.18)';a.lineWidth=2;a.strokeRect(110,38,120,132);
+    var prog=Math.min(1,t/60),lx=148+prog*12,rx=192-prog*12;
+    a.fillStyle='#4a6ee0';a.beginPath();a.arc(lx,116,12,0,Math.PI*2);a.fill();a.fillRect(lx-9,127,18,30);
+    a.fillStyle='#7744aa';a.beginPath();a.arc(rx,116,12,0,Math.PI*2);a.fill();a.beginPath();a.moveTo(rx-10,127);a.lineTo(rx+10,127);a.lineTo(rx+14,157);a.lineTo(rx-14,157);a.closePath();a.fill();
+    if(prog>.65){var hp=Math.min(1,(prog-.65)/.35);hrt(a,(lx+rx)/2,109,11*hp,hp*.85,'#8866ff');}
+    hts.forEach(function(h){h.y+=h.vy;h.x+=h.vx;h.al-=.003;if(h.y<-20||h.al<=0){h.y=230;h.x=Math.random()*340;h.al=.7;}hrt(a,h.x,h.y,h.sz,h.al,h.col);});
+    if(t>60){a.globalAlpha=Math.min(1,(t-60)/30);a.fillStyle='#aa88ff';a.font='bold 11px Rajdhani';a.textAlign='center';a.fillText('Julho 2024 — A noite das palavras',170,200);a.globalAlpha=1;}
+    requestAnimationFrame(frame);
+  }
+  frame();
+}
+document.getElementById('nb').addEventListener('click',function(){
+  document.getElementById('vs').classList.remove('active');
+  showS('<div style="text-align:center;padding:0 24px;max-width:480px;">'
+    +'<div style="font-size:11px;letter-spacing:4px;color:#66ccff;margin-bottom:14px;text-transform:uppercase">Fase 3 Concluída ✓</div>'
+    +'<div class="st" style="font-size:clamp(18px,3vw,30px);margin-bottom:14px;color:#88aaff">Memória Desbloqueada</div>'
+    +'<div class="ss">As palavras foram ditas. A memória estava salva.<br><br><span style="color:#aa88ff;font-style:italic">A Fase 4 — O Namoro está chegando. 💜</span></div>'
+    +'<button class="btn" onclick="startIntro()" style="margin-top:8px">Jogar Novamente ↺</button></div>');
+});
+document.getElementById('rb').addEventListener('click',function(){
+  document.getElementById('go').classList.remove('active');
+  document.getElementById('hud').style.display='none';
+  document.getElementById('ch').style.display='none';
+  startIntro();
+});
+
+startIntro();
+</script>
+</body>
+</html>
