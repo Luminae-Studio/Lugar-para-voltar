@@ -237,23 +237,35 @@ var hitSparks = [];
 var floatingTexts = [];
 
 // ── CARNIVAL BG ──────────────────────────────────────────────────────────────
-var confetti = [];
-for(var ci=0;ci<100;ci++){
+var _CCOLORS=['#ff3366','#ffcc00','#00ccff','#ff6600','#cc00ff','#00ff88'];
+var confetti=[];
+for(var ci=0;ci<80;ci++){
+  var bx=Math.random()*2000;
   confetti.push({
-    x:Math.random()*2000, y:Math.random()*-300,
-    vx:(Math.random()-.5)*1.4, vy:Math.random()*1.6+0.5,
-    r:Math.random()*5+3, angle:Math.random()*Math.PI*2,
-    spin:(Math.random()-.5)*0.14,
-    color:['#ff3366','#ffdd00','#00ccff','#ff6600','#aa44ff','#00dd66','#ff99cc'][Math.floor(Math.random()*7)],
+    baseX:bx, x:bx, y:Math.random()*800,
+    vy:Math.random()*1.4+0.6,
+    drift:(Math.random()-.5)*0.3,
+    phase:Math.random()*Math.PI*2,
+    phaseSpeed:Math.random()*.05+.02,
+    amplitude:Math.random()*12+8,
+    angle:Math.random()*Math.PI*2,
+    spin:(Math.random()-.5)*.09,
+    color:_CCOLORS[Math.floor(Math.random()*6)],
   });
 }
-var streamers = [];
+var _SCOLORS=['#ff3366','#ffcc00','#00ccff'];
+var streamers=[];
 for(var si=0;si<20;si++){
   streamers.push({
-    x:Math.random()*2000, y:Math.random()*600,
-    len:Math.random()*90+40,
-    color:['#ff3366','#ffdd00','#00ccff','#ff6600','#aa44ff'][Math.floor(Math.random()*5)],
-    wobble:Math.random()*Math.PI*2, wspeed:Math.random()*.03+.02,
+    x:Math.random()*2000, y:Math.random()*800,
+    vy:Math.random()*.6+.2,
+    phase:Math.random()*Math.PI*2,
+    phaseSpeed:Math.random()*.03+.01,
+    amplitude:Math.random()*20+10,
+    len:Math.random()*40+40,
+    angle:Math.random()*Math.PI*2,
+    spin:(Math.random()-.5)*.015,
+    color:_SCOLORS[Math.floor(Math.random()*3)],
   });
 }
 var lights = [];
@@ -493,8 +505,17 @@ function updateGame(dt){
 
   // Confetti
   confetti.forEach(function(c){
-    c.x+=c.vx*dt; c.y+=c.vy*dt; c.angle+=c.spin*dt;
-    if(c.y>H+20){ c.y=-20; c.x=Math.random()*W; }
+    c.baseX+=c.drift*dt; c.phase+=c.phaseSpeed*dt;
+    c.x=c.baseX+Math.sin(c.phase)*c.amplitude;
+    c.y+=c.vy*dt; c.angle+=c.spin*dt;
+    if(c.y>H+10){ c.y=-10; c.baseX=Math.random()*W; c.x=c.baseX; }
+  });
+  // Serpentinas
+  streamers.forEach(function(s){
+    s.y+=s.vy*dt; s.phase+=s.phaseSpeed*dt;
+    s.angle+=s.spin*dt;
+    s.x+=Math.sin(s.phase)*0.5*dt;
+    if(s.y>H+90){ s.y=-90; s.x=Math.random()*W; }
   });
 
   // Wave cleared?
@@ -564,20 +585,20 @@ function drawBG(dt){
   ctx.strokeStyle='rgba(255,221,0,0.08)'; ctx.lineWidth=2; ctx.setLineDash([30,20]);
   ctx.beginPath(); ctx.moveTo(0,gy+H*.06); ctx.lineTo(W,gy+H*.06); ctx.stroke(); ctx.setLineDash([]);
 
-  // Streamers
+  // Serpentinas (caindo)
   streamers.forEach(function(s){
-    s.wobble+=s.wspeed;
-    ctx.save(); ctx.translate(s.x%W,s.y);
-    ctx.strokeStyle=s.color+'88'; ctx.lineWidth=2.5; ctx.lineCap='round';
+    ctx.save(); ctx.translate(s.x,s.y); ctx.rotate(s.angle);
+    ctx.strokeStyle=s.color+'aa'; ctx.lineWidth=2.5; ctx.lineCap='round';
+    var l=s.len;
     ctx.beginPath(); ctx.moveTo(0,0);
-    for(var i=0;i<6;i++) ctx.lineTo((i+1)*(s.len/6), Math.sin(s.wobble+i)*(s.len*.18));
+    ctx.bezierCurveTo(l*.25,l*.22, l*.75,-l*.22, l,0);
     ctx.stroke(); ctx.restore();
   });
 
-  // Confetti
+  // Confetti (caindo, 4×8px)
   confetti.forEach(function(c){
     ctx.save(); ctx.translate(c.x,c.y); ctx.rotate(c.angle);
-    ctx.fillStyle=c.color; ctx.fillRect(-c.r/2,-c.r/3,c.r,c.r*.55);
+    ctx.fillStyle=c.color; ctx.fillRect(-2,-4,4,8);
     ctx.restore();
   });
 }
@@ -1022,7 +1043,7 @@ function runVictoryAnim(){
     // Matheus
     a.fillStyle='#ffcc00'; a.beginPath(); a.arc(lx,120,14,0,Math.PI*2); a.fill(); a.fillRect(lx-10,133,20,30);
     // Magali
-    a.fillStyle='#ff88cc'; a.beginPath(); a.arc(rx,120,14,0,Math.PI*2); a.fill();
+    a.fillStyle='#744D64'; a.beginPath(); a.arc(rx,120,14,0,Math.PI*2); a.fill();
     a.beginPath(); a.moveTo(rx-13,133); a.lineTo(rx+13,133); a.lineTo(rx+16,163); a.lineTo(rx-16,163); a.closePath(); a.fill();
 
     // Kiss moment
@@ -1050,19 +1071,7 @@ function runVictoryAnim(){
 }
 
 document.getElementById('next-phase-btn').addEventListener('click', function(){
-  document.getElementById('victory-screen').classList.remove('active');
-  showScreen(
-    '<div style="text-align:center;padding:0 24px;max-width:480px;">'
-    +'<div style="font-size:11px;letter-spacing:4px;color:#ffdd00;margin-bottom:14px;text-transform:uppercase">Fase 2 Concluída ✓</div>'
-    +'<div class="screen-title" style="font-size:clamp(18px,3vw,30px);margin-bottom:14px;color:#ffcc44">Memória Desbloqueada</div>'
-    +'<div class="screen-sub">'
-    +'O Carnaval estava salvo na memória.<br>'
-    +'O portal pulsou — mais forte desta vez.<br><br>'
-    +'<span style="color:#aa44ff;font-style:italic">A Fase 3 — A Conversa está chegando. 💜</span>'
-    +'</div>'
-    +'<button class="btn" onclick="window.location.href=\'fase3-conversa.html\'" style="margin-top:8px">Fase 3 Conversa</button>'
-    +'</div>'
-  );
+  window.location.href='fase3-conversa.html';
 });
 
 document.getElementById('retry-btn').addEventListener('click', function(){

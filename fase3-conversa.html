@@ -148,10 +148,10 @@ function startLevel(){
 
   // ── PLATFORM HELPERS ────────────────────────────────────────────────────
   // Safe platform — always safe to stand on
-  function safe(x,y,w){ PLATS.push({x:x,y:y,w:w,h:16,type:'safe',color:'#3a7a3a',solid:true}); }
+  function safe(x,y,w){ PLATS.push({x:x,y:y,w:w,h:16,type:'safe',color:'#FFD700',solid:true}); }
   // Trap platform — spikes shoot up from surface when player lands
   function trap(x,y,w,delay){
-    var p={x:x,y:y,w:w,h:16,type:'trap',color:'#5a2a2a',solid:true};
+    var p={x:x,y:y,w:w,h:16,type:'trap',color:'#FFD700',solid:true};
     PLATS.push(p);
     // Spike group sitting on top of this platform
     SPIKES.push({
@@ -165,11 +165,11 @@ function startLevel(){
   }
   // Fall platform — drops when stepped on
   function fall(x,y,w){
-    PLATS.push({x:x,y:y,w:w,h:16,type:'fall',color:'#4a3a1a',solid:true,falling:false,vy:0,origY:y});
+    PLATS.push({x:x,y:y,w:w,h:16,type:'fall',color:'#FFD700',solid:true,falling:false,vy:0,origY:y});
   }
   // Moving platform
   function mov(x,y,w,vx,vy,x1,x2,y1,y2){
-    PLATS.push({x:x,y:y,w:w,h:16,type:'moving',color:'#1a3a6a',solid:true,vx:vx||0,vy:vy||0,x1:x1||x,x2:x2||x,y1:y1||y,y2:y2||y});
+    PLATS.push({x:x,y:y,w:w,h:16,type:'moving',color:'#FFD700',solid:true,vx:vx||0,vy:vy||0,x1:x1||x,x2:x2||x,y1:y1||y,y2:y2||y});
   }
   // Key item
   function key(x,y){ KEYS.push({x:x,y:y,w:22,h:22,got:false,spin:Math.random()*6.28,bob:Math.random()*6.28}); }
@@ -183,8 +183,8 @@ function startLevel(){
   // Segment 1: 0–500 (start area)
   PLATS.push({x:0,y:gy,w:500,h:60,type:'safe',color:'#1a0a28',solid:true});
   // GAP: 500–700
-  // Segment 2: 700–1300
-  PLATS.push({x:700,y:gy,w:600,h:60,type:'safe',color:'#1a0a28',solid:true});
+  // Segment 2: 700–880 (no floor under fall platforms — falling = death)
+  PLATS.push({x:700,y:gy,w:180,h:60,type:'safe',color:'#1a0a28',solid:true});
   // GAP: 1300–1600
   // Segment 3: 1600–2400
   PLATS.push({x:1600,y:gy,w:800,h:60,type:'safe',color:'#1a0a28',solid:true});
@@ -221,8 +221,8 @@ function startLevel(){
   trap(900,  gy-200, 100, 0);
   trap(1060, gy-200, 100, 0);
 
-  // KEY 2 — on the last fall platform before it drops (tight timing!)
-  key(1240, gy-190);
+  // KEY 2 — on the safe landing platform after the fall chain
+  key(1440, gy-120);
 
   // ════════════════════════════════════════════════════════════════════════
   // ROOM 3 — Moving platforms + traps (1600–2800)
@@ -248,7 +248,7 @@ function startLevel(){
   // All these look green/safe but are traps with a 15-frame delay
   var r4=[2840,2990,3140,3290,3430];
   for(var i=0;i<r4.length;i++){
-    var p2={x:r4[i],y:gy-90,w:110,h:16,type:'trap',color:'#3a7a3a',solid:true}; // green color = looks safe!
+    var p2={x:r4[i],y:gy-90,w:110,h:16,type:'trap',color:'#FFD700',solid:true};
     PLATS.push(p2);
     SPIKES.push({px:r4[i],py:gy-90,pw:110,platRef:p2,curH:0,maxH:40,state:'idle',riseSpd:7,holdFrames:45,holdT:0,retractSpd:3,delay:12,delayT:0});
   }
@@ -540,23 +540,9 @@ function draw(){
     ctx.fillStyle=p.color;
     ctx.fillRect(px,p.y,p.w,p.h);
 
-    if(p.type==='safe'){
-      // Green safe platforms — bright clear top
-      ctx.fillStyle='rgba(80,220,80,0.35)';
-      ctx.fillRect(px,p.y,p.w,5);
-    } else if(p.type==='trap'){
-      // Dark red trap platforms — subtle warning on top
-      ctx.fillStyle='rgba(200,50,50,0.3)';
-      ctx.fillRect(px,p.y,p.w,5);
-    } else if(p.type==='fall'){
-      // Brown fall platforms — orange tinge
-      ctx.fillStyle=p.falling?'rgba(255,80,0,0.4)':'rgba(255,160,40,0.3)';
-      ctx.fillRect(px,p.y,p.w,5);
-    } else if(p.type==='moving'){
-      // Blue moving platforms — bright top
-      ctx.fillStyle='rgba(60,140,255,0.4)';
-      ctx.fillRect(px,p.y,p.w,5);
-    }
+    // Uniform highlight — all platforms look identical
+    ctx.fillStyle='rgba(255,255,200,0.28)';
+    ctx.fillRect(px,p.y,p.w,4);
   });
 
   // Spikes — ON TOP of their platform, pointing UP
@@ -743,7 +729,7 @@ function runVictAnim(){
     a.fillStyle='rgba(255,200,100,0.1)';a.fillRect(110,38,120,132);a.strokeStyle='rgba(255,200,100,0.18)';a.lineWidth=2;a.strokeRect(110,38,120,132);
     var prog=Math.min(1,t/60),lx=148+prog*12,rx=192-prog*12;
     a.fillStyle='#4a6ee0';a.beginPath();a.arc(lx,116,12,0,Math.PI*2);a.fill();a.fillRect(lx-9,127,18,30);
-    a.fillStyle='#7744aa';a.beginPath();a.arc(rx,116,12,0,Math.PI*2);a.fill();a.beginPath();a.moveTo(rx-10,127);a.lineTo(rx+10,127);a.lineTo(rx+14,157);a.lineTo(rx-14,157);a.closePath();a.fill();
+    a.fillStyle='#744D64';a.beginPath();a.arc(rx,116,12,0,Math.PI*2);a.fill();a.beginPath();a.moveTo(rx-10,127);a.lineTo(rx+10,127);a.lineTo(rx+14,157);a.lineTo(rx-14,157);a.closePath();a.fill();
     if(prog>.65){var hp=Math.min(1,(prog-.65)/.35);hrt(a,(lx+rx)/2,109,11*hp,hp*.85,'#8866ff');}
     hts.forEach(function(h){h.y+=h.vy;h.x+=h.vx;h.al-=.003;if(h.y<-20||h.al<=0){h.y=230;h.x=Math.random()*340;h.al=.7;}hrt(a,h.x,h.y,h.sz,h.al,h.col);});
     if(t>60){a.globalAlpha=Math.min(1,(t-60)/30);a.fillStyle='#aa88ff';a.font='bold 11px Rajdhani';a.textAlign='center';a.fillText('Julho 2024 — A noite das palavras',170,200);a.globalAlpha=1;}
@@ -752,12 +738,7 @@ function runVictAnim(){
   frame();
 }
 document.getElementById('nb').addEventListener('click',function(){
-  document.getElementById('vs').classList.remove('active');
-  showS('<div style="text-align:center;padding:0 24px;max-width:480px;">'
-    +'<div style="font-size:11px;letter-spacing:4px;color:#66ccff;margin-bottom:14px;text-transform:uppercase">Fase 3 Concluída ✓</div>'
-    +'<div class="st" style="font-size:clamp(18px,3vw,30px);margin-bottom:14px;color:#88aaff">Memória Desbloqueada</div>'
-    +'<div class="ss">As palavras foram ditas. A memória estava salva.<br><br><span style="color:#aa88ff;font-style:italic">A Fase 4 — O Namoro está chegando. 💜</span></div>'
-    +'<button class="btn" onclick="window.location.href=\'fase4-namoro.html\'" style="margin-top:8px">Fase 4 Namoro</button></div>');
+  window.location.href='fase4-namoro.html';
 });
 document.getElementById('rb').addEventListener('click',function(){
   document.getElementById('go').classList.remove('active');

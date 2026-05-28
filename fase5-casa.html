@@ -472,21 +472,21 @@ function goPlay(){
 // ── QUIZ ─────────────────────────────────────────────────────────────────────
 var QUESTIONS=[
   {
-    q:'Qual o lado da cama do Matheus?',
-    sub:'(ou do colchão no chão... 😄)',
-    opts:['Lado esquerdo','Lado direito','No meio','Não tem lado fixo'],
+    q:'Qual é o lado da cama da Magali?',
+    sub:'',
+    opts:['Lado Esquerdo','Lado Direito','No meio','Ela não tem lado fixo'],
+    answer:0,
+  },
+  {
+    q:'Qual é o lugar de sempre para escolher a janta fora de casa?',
+    sub:'',
+    opts:['Bar da Esquina','Jantinha','Talavera','Shopping'],
     answer:1,
   },
   {
-    q:'Qual a comida favorita que ela faz para ele?',
-    sub:'(a que vai na marmita com notinha)',
-    opts:['Macarrão','Arroz com frango','Strogonoff','Pizza caseira'],
-    answer:2,
-  },
-  {
-    q:'Qual a série que os dois assistem juntos?',
-    sub:'(mesmo com gostos bem diferentes...)',
-    opts:['Stranger Things','La Casa de Papel','Dá da Dan','Breaking Bad'],
+    q:'Qual série os dois assistem juntos?',
+    sub:'',
+    opts:['Da Da Dan','Naruto','Mob Psycho 100','Paradisy'],
     answer:2,
   },
 ];
@@ -629,7 +629,7 @@ function runVictAnim(){
     // Matheus
     a.fillStyle='#4a6ee0';a.beginPath();a.arc(lx,148,12,0,Math.PI*2);a.fill();a.fillRect(lx-9,159,18,14);
     // Magali
-    a.fillStyle='#7744aa';a.beginPath();a.arc(rx,148,12,0,Math.PI*2);a.fill();a.beginPath();a.moveTo(rx-9,159);a.lineTo(rx+9,159);a.lineTo(rx+12,173);a.lineTo(rx-12,173);a.closePath();a.fill();
+    a.fillStyle='#744D64';a.beginPath();a.arc(rx,148,12,0,Math.PI*2);a.fill();a.beginPath();a.moveTo(rx-9,159);a.lineTo(rx+9,159);a.lineTo(rx+12,173);a.lineTo(rx-12,173);a.closePath();a.fill();
     // Heart
     if(prog>.6){var hp=Math.min(1,(prog-.6)/.4);hrt(a,(lx+rx)/2,132,12*hp,hp*.9,'#ffdd44');}
 
@@ -648,13 +648,7 @@ function runVictAnim(){
 }
 
 document.getElementById('nb').addEventListener('click',function(){
-  document.getElementById('vs').classList.remove('active');
-  showS('<div style="text-align:center;padding:0 24px;max-width:480px;">'
-    +'<div style="font-size:11px;letter-spacing:4px;color:#ffaa44;margin-bottom:14px;text-transform:uppercase">Fase 5 Concluída ✓</div>'
-    +'<div class="st" style="font-size:clamp(18px,3vw,30px);margin-bottom:14px;color:#ffcc66">Memória Desbloqueada</div>'
-    +'<div class="ss">A casa estava salva na memória.<br>O portal pulsou — quente como um lar.<br><br>'
-    +'<span style="color:#ffaa44;font-style:italic">A Fase 6 — A Aliança está chegando. 💍</span></div>'
-    +'<button class="btn" onclick="window.location.href=\'fase6-alianca.html\'" style="margin-top:8px">Fase 6 Aliança</button></div>');
+  window.location.href='fase6-alianca.html';
 });
 
 document.getElementById('rb').addEventListener('click',function(){

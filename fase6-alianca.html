@@ -757,7 +757,7 @@ function runVictAnim(){
     // Sunflower
     a.font='22px serif';a.textAlign='center';a.fillText('🌻',lx+20,128);
     // Magali (purple)
-    a.fillStyle='#7744aa';a.beginPath();a.arc(rx,140,13,0,Math.PI*2);a.fill();
+    a.fillStyle='#744D64';a.beginPath();a.arc(rx,140,13,0,Math.PI*2);a.fill();
     a.beginPath();a.moveTo(rx-10,152);a.lineTo(rx+10,152);a.lineTo(rx+13,174);a.lineTo(rx-13,174);a.closePath();a.fill();
     // Ring between them
     if(prog>.5){
@@ -776,13 +776,7 @@ function runVictAnim(){
 }
 
 document.getElementById('nb').addEventListener('click',function(){
-  document.getElementById('vs').classList.remove('active');
-  showS('<div style="text-align:center;padding:0 24px;max-width:480px;">'
-    +'<div style="font-size:11px;letter-spacing:4px;color:#cc88ff;margin-bottom:14px;text-transform:uppercase">Fase 6 Concluída ✓</div>'
-    +'<div class="st" style="font-size:clamp(18px,3vw,30px);margin-bottom:14px;color:#dd99ff">Memória Desbloqueada</div>'
-    +'<div class="ss">A aliança estava salva na memória.<br>O portal pulsou — roxo e dourado.<br><br>'
-    +'<span style="color:#cc88ff;font-style:italic">A Fase Final — 2 Anos de Namoro está chegando. 💜✨</span></div>'
-    +'<button class="btn" onclick="startIntro()" style="margin-top:8px">Jogar Novamente ↺</button></div>');
+  window.location.href='index.html';
 });
 document.getElementById('rb').addEventListener('click',function(){
   document.getElementById('go').classList.remove('active');

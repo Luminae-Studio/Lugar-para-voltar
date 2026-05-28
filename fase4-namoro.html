@@ -752,7 +752,7 @@ function runVictAnim(){
     a.beginPath();a.arc(lx,138,12,0,Math.PI*2);a.fill();
     a.fillRect(lx-9,149,18,16);
     // Magali (purple)
-    a.fillStyle='#7744aa';
+    a.fillStyle='#744D64';
     a.beginPath();a.arc(rx,138,12,0,Math.PI*2);a.fill();
     a.beginPath();a.moveTo(rx-10,149);a.lineTo(rx+10,149);a.lineTo(rx+13,165);a.lineTo(rx-13,165);a.closePath();a.fill();
     // Heart between them
@@ -770,12 +770,7 @@ function runVictAnim(){
 }
 
 document.getElementById('nb').addEventListener('click',function(){
-  document.getElementById('vs').classList.remove('active');
-  showS('<div style="text-align:center;padding:0 24px;max-width:480px;">'
-    +'<div style="font-size:11px;letter-spacing:4px;color:#ffdd88;margin-bottom:14px;text-transform:uppercase">Fase 4 Concluída ✓</div>'
-    +'<div class="st" style="font-size:clamp(18px,3vw,30px);margin-bottom:14px;color:#ffcc66">Memória Desbloqueada</div>'
-    +'<div class="ss">O namoro estava salvo na memória.<br>O portal pulsou — dourado desta vez.<br><br><span style="color:#ffdd88;font-style:italic">A Fase 5 — Morarem Juntos está chegando. 🏠💕</span></div>'
-    +'<button class="btn" onclick="window.location.href=\'fase5-casa.html\'" style="margin-top:8px">Fase 5 Casa</button></div>');
+  window.location.href='fase5-casa.html';
 });
 
 document.getElementById('rb').addEventListener('click',function(){
